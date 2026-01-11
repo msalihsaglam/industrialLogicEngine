@@ -19,7 +19,13 @@ const pool = new Pool({
 });
 
 const endpointUrl = "opc.tcp://localhost:4840/UA/MyLittleServer";
-const nodeIdToMonitor = "ns=1;s=Pressure";
+//const nodeIdToMonitor = "ns=1;s=Pressure";
+
+// Takip etmek istediğimiz tüm Tag'leri bir listede tutuyoruz
+const tagsToMonitor = [
+    { name: "Pressure", node: "ns=1;s=Pressure" },
+    { name: "Temperature", node: "ns=1;s=Temperature" }
+];
 
 // 3. API Endpoint: Kuralları Listele
 app.get("/api/rules", async (req, res) => {
@@ -53,23 +59,37 @@ async function main() {
     try {
         await client.connect(endpointUrl);
         const session = await client.createSession();
-        console.log("✅ OPC UA Bağlantısı Tamam");
+        console.log("✅ OPC UA Bağlantısı ve Session Aktif");
 
-        const subscription = await session.createSubscription2({ requestedPublishingInterval: 1000, publishingEnabled: true });
-        const monitoredItem = await subscription.monitor(
-            { nodeId: nodeIdToMonitor, attributeId: AttributeIds.Value },
-            { samplingInterval: 500, discardOldest: true, queueSize: 1 },
-            TimestampsToReturn.Both
-        );
-
-        monitoredItem.on("changed", (dataValue) => {
-            const val = dataValue.value.value;
-            // Canlı veriyi Web'e gönder
-            io.emit("liveData", { tag: "Pressure", value: val });
-            checkRules('Pressure', val);
+        const subscription = await session.createSubscription2({ 
+            requestedPublishingInterval: 1000, 
+            publishingEnabled: true 
         });
+
+        // DÖNGÜ: Tüm tag'ler için ayrı ayrı izleme (monitor) başlatıyoruz
+        for (let tag of tagsToMonitor) {
+            const monitoredItem = await subscription.monitor(
+                { nodeId: tag.node, attributeId: AttributeIds.Value },
+                { samplingInterval: 500, discardOldest: true, queueSize: 1 },
+                TimestampsToReturn.Both
+            );
+
+            monitoredItem.on("changed", (dataValue) => {
+                const val = dataValue.value.value;
+                
+                // 1. Canlı veriyi Frontend'e Tag ismiyle gönderiyoruz
+                io.emit("liveData", { tag: tag.name, value: val });
+                
+                // 2. Kural kontrolünü bu Tag için çalıştırıyoruz
+                checkRules(tag.name, val);
+                
+                console.log(`📡 [${tag.name}]: ${val.toFixed(2)}`);
+            });
+        }
     } catch (err) { console.error("❌ Hata:", err.message); }
 }
+
+
 
 main();
 server.listen(3001, () => console.log("🌐 Web Sunucusu 3001 portunda hazır"));

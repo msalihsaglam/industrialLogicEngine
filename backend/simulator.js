@@ -28,14 +28,31 @@ async function createServer() {
         }
     });
 
+    // Sürekli değişen bir değişken ekleyelim (Sıcaklık Sensörü)
+    let variableValueTemperature = 20;
+    namespace.addVariable({
+        componentOf: device,
+        browseName: "Temperature",
+        nodeId: "s=Temperature", // ns=1;s=Temperature
+        dataType: "Double",
+        value: {
+            get: () => new Variant({ dataType: DataType.Double, value: variableValueTemperature })
+        }
+    });
+
     // Değeri her saniye rastgele değiştir
     setInterval(() => {
         variableValue = 10 + Math.random() * 50;
     }, 1000);
 
+    // Değeri her saniye rastgele değiştir
+    setInterval(() => {
+        variableValueTemperature = 20 + Math.random() * 50;
+    }, 1000);
+
     await server.start();
-    console.log("🚀 Simülatör (PLC) 4840 portunda çalışıyor!");
-    console.log("Adres: opc.tcp://localhost:4840/UA/MyLittleServer");
+    //console.log("🚀 Simülatör (PLC) 4840 portunda çalışıyor!");
+    //console.log("Adres: opc.tcp://localhost:4840/UA/MyLittleServer");
 }
 
 createServer();
