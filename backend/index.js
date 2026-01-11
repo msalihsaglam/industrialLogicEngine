@@ -1,55 +1,61 @@
 const { OPCUAClient, AttributeIds, TimestampsToReturn } = require("node-opcua");
-const { Pool } = require("pg"); // PostgreSQL bağlantısı için
+const { Pool } = require("pg");
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 
-// 1. Veritabanı Bağlantı Ayarı
+// 1. Web Sunucusu ve Socket Ayarları
+const app = express();
+app.use(cors());
+app.use(express.json());
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+// 2. Veritabanı Bağlantısı
 const pool = new Pool({
-    user: 'admin',
-    host: 'localhost',
-    database: 'logic_engine',
-    password: 'password123',
-    port: 5432,
+    user: 'admin', host: 'localhost', database: 'logic_engine',
+    password: 'password123', port: 5432,
 });
 
 const endpointUrl = "opc.tcp://localhost:4840/UA/MyLittleServer";
 const nodeIdToMonitor = "ns=1;s=Pressure";
 
+// 3. API Endpoint: Kuralları Listele
+app.get("/api/rules", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM rules ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+// 4. Logic Engine ve Kural Kontrolü
 async function checkRules(tagName, currentValue) {
     try {
-        // DB'den bu tag için aktif olan kuralları getir
-        const res = await pool.query(
-            "SELECT * FROM rules WHERE tag_name = $1 AND is_active = true", 
-            [tagName]
-        );
-
+        const res = await pool.query("SELECT * FROM rules WHERE tag_name = $1 AND is_active = true", [tagName]);
         res.rows.forEach(rule => {
             let isTriggered = false;
             if (rule.operator === '>' && currentValue > rule.threshold) isTriggered = true;
             if (rule.operator === '<' && currentValue < rule.threshold) isTriggered = true;
-            if (rule.operator === '=' && currentValue == rule.threshold) isTriggered = true;
 
             if (isTriggered) {
-                console.log(`\x1b[33m[KURAL TETİKLENDİ]\x1b[0m ${rule.alert_message} (Değer: ${currentValue.toFixed(2)})`);
-                // Buraya ileride: insertIntoAlertHistory(rule.id, currentValue) eklenebilir.
+                // Alarmı hem konsola hem Web'e gönder
+                io.emit("alarm", { message: rule.alert_message, value: currentValue, time: new Date().toLocaleTimeString() });
             }
         });
-    } catch (err) {
-        console.error("Kural kontrol hatası:", err.message);
-    }
+    } catch (err) { console.error("Kural hatası:", err.message); }
 }
 
 async function main() {
     const client = OPCUAClient.create({ endpointMustExist: false });
-
     try {
         await client.connect(endpointUrl);
         const session = await client.createSession();
-        console.log("✅ Logic Engine Yayında ve DB'ye Bağlı!");
+        console.log("✅ OPC UA Bağlantısı Tamam");
 
-        const subscription = await session.createSubscription2({
-            requestedPublishingInterval: 1000,
-            publishingEnabled: true
-        });
-
+        const subscription = await session.createSubscription2({ requestedPublishingInterval: 1000, publishingEnabled: true });
         const monitoredItem = await subscription.monitor(
             { nodeId: nodeIdToMonitor, attributeId: AttributeIds.Value },
             { samplingInterval: 500, discardOldest: true, queueSize: 1 },
@@ -58,15 +64,12 @@ async function main() {
 
         monitoredItem.on("changed", (dataValue) => {
             const val = dataValue.value.value;
-            console.log(`📊 Anlık Veri: ${val.toFixed(2)}`);
-            
-            // HER DEĞİŞİMDE DB'DEKİ KURALLARI KONTROL ET
+            // Canlı veriyi Web'e gönder
+            io.emit("liveData", { tag: "Pressure", value: val });
             checkRules('Pressure', val);
         });
-
-    } catch (err) {
-        console.error("❌ Hata:", err.message);
-    }
+    } catch (err) { console.error("❌ Hata:", err.message); }
 }
 
 main();
+server.listen(3001, () => console.log("🌐 Web Sunucusu 3001 portunda hazır"));
