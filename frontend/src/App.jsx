@@ -4,74 +4,106 @@ import axios from 'axios';
 import { 
   Activity, AlertTriangle, Settings, Database, 
   Menu, X, LayoutDashboard, PlusCircle, History, ChevronRight,
-  Thermometer, Gauge
+  Thermometer, Gauge, Trash2, Save, Play
 } from 'lucide-react';
 
 const socket = io('http://localhost:3001');
 
 function App() {
-  // State: Çoklu veri yapısı
   const [liveData, setLiveData] = useState({ Pressure: 0, Temperature: 0 });
   const [rules, setRules] = useState([]);
   const [alarms, setAlarms] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  useEffect(() => {
-    // 1. Kuralları çek
-    axios.get('http://localhost:3001/api/rules').then(res => setRules(res.data));
+  const [newRule, setNewRule] = useState({
+    tag_name: 'Pressure',
+    operator: '>',
+    threshold: '',
+    alert_message: ''
+  });
 
-    // 2. Canlı veriyi dinle (Tag bazlı güncelleme)
-    socket.on('liveData', (data) => {
-      setLiveData(prev => ({
-        ...prev,
-        [data.tag]: data.value // Gelen tag ismine göre (Pressure/Temperature) ilgili yeri günceller
-      }));
+  useEffect(() => {
+    fetchRules();
+
+    // --- DEBUG LOGLARI BAŞLANGIÇ ---
+    socket.on('connect', () => {
+      console.log("🟢 Socket.io Bağlantısı Başarılı. ID:", socket.id);
     });
 
-    // 3. Alarmları dinle
+    socket.on('connect_error', (err) => {
+      console.error("🔴 Socket.io Bağlantı Hatası:", err.message);
+    });
+
+    socket.on('liveData', (data) => {
+      console.log("📡 Gelen Ham Veri (liveData):", data);
+      
+      // Verinin tag ismine göre state'i güncelle
+      if (data.tag) {
+        setLiveData(prev => {
+          const newState = { ...prev, [data.tag]: data.value };
+          console.log("📊 Güncellenen State (liveData):", newState);
+          return newState;
+        });
+      }
+    });
+    // --- DEBUG LOGLARI BİTİŞ ---
+
     socket.on('alarm', (newAlarm) => {
+      console.log("⚠️ ALARM TETİKLENDİ:", newAlarm);
       setAlarms(prev => [newAlarm, ...prev].slice(0, 5));
     });
 
     return () => {
+      socket.off('connect');
+      socket.off('connect_error');
       socket.off('liveData');
       socket.off('alarm');
     };
   }, []);
 
+  const fetchRules = async () => {
+    try {
+      const res = await axios.get('http://localhost:3001/api/rules');
+      setRules(res.data);
+    } catch (err) {
+      console.error("Rules çekme hatası:", err);
+    }
+  };
+
+  const handleAddRule = async (e) => {
+    e.preventDefault();
+    if (!newRule.threshold || !newRule.alert_message) return alert("Lütfen tüm alanları doldurun.");
+    await axios.post('http://localhost:3001/api/rules', newRule);
+    setNewRule({ tag_name: 'Pressure', operator: '>', threshold: '', alert_message: '' });
+    fetchRules();
+  };
+
+  const deleteRule = async (id) => {
+    if (window.confirm("Bu kuralı silmek istediğinize emin misiniz?")) {
+      await axios.delete(`http://localhost:3001/api/rules/${id}`);
+      fetchRules();
+    }
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} /> },
+    { id: 'settings', label: 'Settings', icon: <Settings size={20} /> }, // Ayarlar eklendi
     { id: 'history', label: 'Alarm History', icon: <History size={20} /> },
-    { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
   ];
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
       
-      {/* --- SIDEBAR --- */}
       <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col fixed h-full z-50 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
-          {isSidebarOpen && (
-            <div className="flex items-center gap-2 font-bold text-blue-400 tracking-wider">
-              <Activity size={24} /> <span>LOGIC.IO</span>
-            </div>
-          )}
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400">
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {isSidebarOpen && <div className="flex items-center gap-2 font-bold text-blue-400 tracking-wider"><Activity size={24} /> <span>LOGIC.IO</span></div>}
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><Menu size={20} /></button>
         </div>
-
         <nav className="flex-1 px-3 space-y-2 mt-4">
           {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all duration-200 group ${
-                activeTab === item.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'
-              }`}
-            >
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
               <div className="min-w-[20px]">{item.icon}</div>
               {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.label}</span>}
             </button>
@@ -79,119 +111,167 @@ function App() {
         </nav>
       </aside>
 
-      {/* --- MAIN CONTENT --- */}
       <main className={`flex-1 flex flex-col h-screen transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
-        
-        {/* Topbar */}
-        <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-40">
-           <div className="flex items-center gap-2 text-slate-400 text-sm">
-              <span>Home</span> <ChevronRight size={14} /> <span className="text-blue-400 capitalize">{activeTab}</span>
-           </div>
-           <div className="text-sm font-mono text-green-400 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-              OPC UA: CONNECTED
+        <header className="h-16 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-8 sticky top-0 z-40">
+           <div className="flex items-center gap-2 text-slate-400 text-sm"><span>Home</span> <ChevronRight size={14} /> <span className="text-blue-400 capitalize">{activeTab}</span></div>
+           <div className="text-xs font-mono text-green-400 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 uppercase tracking-widest">
+            {socket.connected ? "System Online" : "Connecting..."}
            </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
           
+          {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-8 animate-in fade-in duration-500">
-              
-              {/* Sensör Kartları Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Pressure Card */}
-                <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Gauge size={80} />
-                  </div>
-                  <h2 className="text-slate-400 font-medium mb-1 flex items-center gap-2">
-                    <Database size={16} /> Pressure Sensor
-                  </h2>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-6xl font-black text-blue-400 tracking-tighter">
-                      {liveData.Pressure.toFixed(2)}
-                    </span>
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-sm">PSI</span>
-                  </div>
-                  <div className="mt-4 w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div className="bg-blue-500 h-full transition-all duration-500" style={{ width: `${(liveData.Pressure / 60) * 100}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Temperature Card */}
-                <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Thermometer size={80} />
-                  </div>
-                  <h2 className="text-slate-400 font-medium mb-1 flex items-center gap-2">
-                    <Thermometer size={16} className="text-orange-500" /> Temperature Sensor
-                  </h2>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-6xl font-black text-orange-400 tracking-tighter">
-                      {liveData.Temperature.toFixed(2)}
-                    </span>
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-sm">°C</span>
-                  </div>
-                  <div className="mt-4 w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div className="bg-orange-500 h-full transition-all duration-500" style={{ width: `${(liveData.Temperature / 80) * 100}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Alarms & History Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-slate-900 rounded-2xl p-6 border border-slate-800">
-                  <h2 className="text-slate-400 font-medium mb-4 flex items-center gap-2">Active Logic Rules</h2>
-                  <div className="space-y-2">
-                    {rules.map(r => (
-                      <div key={r.id} className="flex justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-800 text-sm">
-                        <span className="text-blue-300 font-mono">{r.tag_name}</span>
-                        <span className="text-slate-400">{r.operator} {r.threshold}</span>
-                        <span className="text-green-500 text-xs bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Active</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
+               <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl">
+                  <h2 className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-widest font-semibold"><Gauge size={16}/> Pressure</h2>
+                  <div className="text-6xl font-black text-blue-400">{liveData.Pressure.toFixed(2)} <span className="text-xl text-slate-600">PSI</span></div>
+               </div>
+               <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-xl">
+                  <h2 className="text-slate-400 text-sm mb-2 flex items-center gap-2 uppercase tracking-widest font-semibold"><Thermometer size={16}/> Temperature</h2>
+                  <div className="text-6xl font-black text-orange-400">{liveData.Temperature.toFixed(2)} <span className="text-xl text-slate-600">°C</span></div>
+               </div>
+               
+               {/* Alarmlar */}
+               <div className="md:col-span-2 bg-slate-900 rounded-2xl p-6 border border-slate-800 overflow-hidden">
+                  <h2 className="text-slate-400 font-medium mb-6 flex items-center gap-2 text-amber-500 uppercase text-xs tracking-widest">Recent System Alarms</h2>
+                  <div className="space-y-4">
+                    {alarms.length === 0 ? <p className="text-slate-600 italic text-sm">No alarms detected.</p> : alarms.map((a, i) => (
+                      <div key={i} className="bg-red-500/5 border-l-2 border-red-500 p-3 text-xs flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-red-400">{a.message}</div>
+                          <div className="text-slate-500 mt-1">{a.time}</div>
+                        </div>
+                        <div className="text-red-300 font-mono">Val: {a.value?.toFixed(2)}</div>
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 h-fit">
-                  <h2 className="text-slate-400 font-medium mb-4 flex items-center gap-2 text-amber-500">
-                    <AlertTriangle size={18} /> Recent Alarms
-                  </h2>
-                  <div className="space-y-3">
-                    {alarms.length === 0 ? (
-                      <div className="text-slate-600 text-sm italic text-center py-4">No alerts in queue</div>
-                    ) : (
-                      alarms.map((a, i) => (
-                        <div key={i} className="bg-red-500/5 border-l-2 border-red-500 p-3 rounded-r animate-in slide-in-from-right-2">
-                          <div className="font-bold text-red-400 text-xs">{a.message}</div>
-                          <div className="text-slate-500 text-[10px] mt-1 font-mono">{a.time} | Val: {a.value.toFixed(1)}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
+               </div>
             </div>
           )}
 
-          {activeTab === 'rules' && (
-            <div className="animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-               <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-3xl font-bold">Rule Management</h2>
-                  <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all">
-                    <PlusCircle size={18} /> Create New Rule
-                  </button>
-               </div>
-               
-               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
-                  <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
-                    <Settings size={32} />
+          {/* SETTINGS TAB */}
+          {activeTab === 'settings' && (
+            <div className="max-w-6xl mx-auto animate-in fade-in duration-500">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-bold">System Configuration</h2>
+                  <p className="text-slate-500">Manage external PLC and SCADA connections</p>
+                </div>
+                <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl flex items-center gap-2">
+                  <PlusCircle size={20} /> Add New Source
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl border-l-4 border-l-green-500">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-200">Local Simulator</h3>
+                      <p className="text-xs text-slate-500 font-mono">opc.tcp://localhost:4840</p>
+                    </div>
+                    <span className="bg-green-500/10 text-green-500 text-[10px] font-bold px-2 py-1 rounded border border-green-500/20">CONNECTED</span>
                   </div>
-                  <h3 className="text-xl font-medium mb-2">Configure System Logic</h3>
-                  <p className="text-slate-500 mb-6">Create automated actions based on sensor thresholds and data trends.</p>
-               </div>
+                  <div className="flex gap-2 mt-6">
+                    <button className="flex-1 bg-slate-800 hover:bg-slate-700 py-2 rounded-lg text-sm text-slate-300 transition-colors">Configure Tags</button>
+                    <button className="px-4 bg-slate-800 hover:bg-red-500/20 hover:text-red-500 py-2 rounded-lg text-slate-300 transition-colors"><Trash2 size={16}/></button>
+                  </div>
+                </div>
+                <div className="bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-600 hover:border-slate-700 transition-all cursor-pointer group">
+                  <PlusCircle size={32} className="mb-2 group-hover:text-slate-400" />
+                  <span className="text-sm">Define New Data Source</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* RULES MANAGEMENT TAB */}
+          {activeTab === 'rules' && (
+            <div className="max-w-6xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl h-fit">
+                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-blue-400">
+                    <PlusCircle size={20} /> Add New Logic Rule
+                  </h3>
+                  <form onSubmit={handleAddRule} className="space-y-4">
+                    <div>
+                      <label className="text-xs text-slate-500 block mb-1 uppercase tracking-wider font-semibold">Target Sensor</label>
+                      <select 
+                        value={newRule.tag_name}
+                        onChange={(e) => setNewRule({...newRule, tag_name: e.target.value})}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="Pressure">Pressure Sensor</option>
+                        <option value="Temperature">Temperature Sensor</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-slate-500 block mb-1 uppercase tracking-wider font-semibold">Operator</label>
+                        <select 
+                          value={newRule.operator}
+                          onChange={(e) => setNewRule({...newRule, operator: e.target.value})}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none"
+                        >
+                          <option value=">">Greater Than (&gt;)</option>
+                          <option value="<">Less Than (&lt;)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 block mb-1 uppercase tracking-wider font-semibold">Threshold</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g. 45"
+                          value={newRule.threshold}
+                          onChange={(e) => setNewRule({...newRule, threshold: e.target.value})}
+                          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 block mb-1 uppercase tracking-wider font-semibold">Alert Message</label>
+                      <textarea 
+                        placeholder="Critical pressure detected!"
+                        value={newRule.alert_message}
+                        onChange={(e) => setNewRule({...newRule, alert_message: e.target.value})}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none h-24"
+                      />
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all">
+                      <Save size={18} /> Save Rule
+                    </button>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                  <h3 className="text-lg font-bold mb-6 text-slate-400 flex items-center gap-2 uppercase text-xs tracking-widest">Active System Logic</h3>
+                  <div className="overflow-hidden">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="text-slate-500 text-xs uppercase border-b border-slate-800">
+                          <th className="pb-4">Tag</th>
+                          <th className="pb-4">Condition</th>
+                          <th className="pb-4">Message</th>
+                          <th className="pb-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {rules.map((rule) => (
+                          <tr key={rule.id} className="group hover:bg-slate-800/30 transition-colors">
+                            <td className="py-4 text-blue-400 font-mono text-sm">{rule.tag_name}</td>
+                            <td className="py-4 text-sm font-medium">{rule.operator} {rule.threshold}</td>
+                            <td className="py-4 text-xs text-slate-400 max-w-[200px] truncate">{rule.alert_message}</td>
+                            <td className="py-4 text-right">
+                              <button onClick={() => deleteRule(rule.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
