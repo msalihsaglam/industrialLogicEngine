@@ -27,7 +27,6 @@ function App() {
     api.getConnections().then(res => setConnections(res.data));
   };
 
-  // History buradan kaldırıldı
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} /> },
@@ -61,7 +60,16 @@ function App() {
 
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'dashboard' && <Dashboard liveData={liveData} alarms={alarms} />}
-          {activeTab === 'rules' && <RuleManagement rules={rules} onRefresh={refreshAllData} />}
+          
+          {/* RULE MANAGEMENT - connections prop'u eklendi */}
+          {activeTab === 'rules' && (
+            <RuleManagement 
+              rules={rules} 
+              connections={connections} 
+              onRefresh={refreshAllData} 
+            />
+          )}
+          
           {activeTab === 'connections' && <ConnectionPage connections={connections} onRefresh={refreshAllData} />}
         </div>
       </main>

@@ -10,10 +10,16 @@ router.get("/", async (req, res) => {
 
 // Ekleme
 router.post("/", async (req, res) => {
-    const { tag_name, threshold, operator, alert_message } = req.body;
-    const query = "INSERT INTO rules (tag_name, threshold, operator, alert_message) VALUES ($1, $2, $3, $4) RETURNING *";
-    const result = await pool.query(query, [tag_name, threshold, operator, alert_message]);
-    res.json(result.rows[0]);
+    const { tag_id, operator, threshold, alert_message } = req.body;
+    try {
+        const result = await pool.query(
+            "INSERT INTO rules (tag_id, operator, threshold, alert_message) VALUES ($1, $2, $3, $4) RETURNING *",
+            [tag_id, operator, threshold, alert_message]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Silme
