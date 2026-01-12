@@ -1,42 +1,52 @@
 const { OPCUAClient, AttributeIds, TimestampsToReturn } = require("node-opcua");
 const socketManager = require("../socket/socketManager");
 const { checkRules } = require("./logicEngine");
-const pool = require("../config/db"); // Veritabanı bağlantısı
+const pool = require("../config/db");
 
-// Takip edilecek standart tag listesi (İleride bunlar da DB'den gelebilir)
-const tags = [
-    { name: "Pressure", node: "ns=1;s=Pressure" },
-    { name: "Temperature", node: "ns=1;s=Temperature" }
-];
-
-// Aktif istemcileri (clients) saklamak için bir hafıza (Cache)
+// Aktif istemcileri (client, session, subscription) saklamak için hafıza
 const activeClients = {};
 
 /**
- * Tek bir bağlantı oluşturur ve izlemeyi başlatır
+ * Tek bir bağlantı oluşturur ve DB'deki tag'leri izlemeye başlar
  */
 async function createConnection(conn) {
-    const { id, name, endpoint_url } = conn;
+    const { id, name, endpoint_url } = conn; // DB'den gelen isimler: id, name, endpoint_url
     const io = socketManager.getIo();
 
     const client = OPCUAClient.create({ 
         endpointMustExist: false,
-        connectionStrategy: { maxRetry: 10, initialDelay: 2000 }
+        connectionStrategy: {
+            maxRetry: 10,
+            initialDelay: 2000
+        }
     });
 
     try {
         console.log(`📡 [${name}] Sistemine bağlanılıyor: ${endpoint_url}`);
-        await client.connect(endpoint_url);
+        
+        // HATA DÜZELTİLDİ: endpointUrl -> endpoint_url
+        await client.connect(endpoint_url); 
+        
         const session = await client.createSession();
+
+        // Bu bağlantıya ait tag'leri veritabanından çekiyoruz
+        const tagsResult = await pool.query("SELECT * FROM tags WHERE connection_id = $1", [id]);
+        const dbTags = tagsResult.rows;
+
+        if (dbTags.length === 0) {
+            console.warn(`⚠️ [${name}] için tanımlı tag bulunamadı. İzleme başlatılamadı.`);
+            return;
+        }
 
         const subscription = await session.createSubscription2({ 
             requestedPublishingInterval: 1000, 
             publishingEnabled: true 
         });
 
-        for (let tag of tags) {
+        // Her bir tag için monitor başlat
+        for (let tag of dbTags) {
             const monitoredItem = await subscription.monitor(
-                { nodeId: tag.node, attributeId: AttributeIds.Value },
+                { nodeId: tag.node_id, attributeId: AttributeIds.Value },
                 { samplingInterval: 500, discardOldest: true, queueSize: 1 },
                 TimestampsToReturn.Both
             );
@@ -44,38 +54,40 @@ async function createConnection(conn) {
             monitoredItem.on("changed", (dataValue) => {
                 const val = dataValue.value.value;
                 
-                // Veriyi hangi sistemden geldiği bilgisiyle (sourceId) gönderiyoruz
+                // Frontend'e veri paketini gönder
                 io.emit("liveData", { 
-                    tag: tag.name, 
+                    tagId: tag.id,
+                    tagName: tag.tag_name, 
                     value: val, 
-                    sourceId: id, 
-                    sourceName: name 
+                    unit: tag.unit,
+                    sourceId: id,
+                    sourceName: name
                 });
 
-                // Kural motorunu çalıştır
-                checkRules(tag.name, val);
+                // Logic Engine kontrolü (ID üzerinden)
+                checkRules(tag.id, val); 
             });
         }
 
-        // Başarılı bağlantıyı hafızaya kaydet
-        activeClients[id] = { client, session, name };
-        console.log(`✅ [${name}] Bağlantısı ve abonelikleri başarıyla başlatıldı.`);
+        // İleride yönetebilmek için hafızaya kaydet
+        activeClients[id] = { client, session, subscription, name };
+        
+        console.log(`✅ [${name}] Bağlantısı kuruldu ve ${dbTags.length} tag izleniyor.`);
 
     } catch (err) {
-        console.error(`❌ [${name}] Bağlantı hatası (${endpoint_url}):`, err.message);
+        console.error(`❌ [${name}] Bağlantı Hatası:`, err.message);
     }
 }
 
 /**
- * Veritabanındaki tüm aktif bağlantıları başlatır
+ * Başlangıçta DB'deki tüm aktif (status=true) bağlantıları ayağa kaldırır
  */
 async function startOPCUA() {
     try {
-        // Sadece durumu true (aktif) olan bağlantıları çek
         const res = await pool.query("SELECT * FROM connections WHERE status = true");
         
         if (res.rows.length === 0) {
-            console.warn("⚠️ Veritabanında aktif bağlantı tanımı bulunamadı! Lütfen connections tablosunu doldurun.");
+            console.warn("⚠️ Aktif bağlantı tanımı yok. Lütfen Connection sayfasından ekleme yapın.");
             return;
         }
 
@@ -84,14 +96,17 @@ async function startOPCUA() {
         }
 
     } catch (err) {
-        console.error("CRITICAL: Connections tablosu okunamadı:", err.message);
+        console.error("CRITICAL: Veritabanı bağlantı hatası:", err.message);
     }
 }
 
 /**
- * Çalışma anında yeni bir bağlantı eklemek için (Arayüzden 'Add Source' denildiğinde çağrılır)
+ * Arayüzden yeni bir kaynak eklendiğinde çalışma anında tetiklenir
  */
 async function addNewConnection(connId) {
+    // Eğer zaten bağlıysak tekrar bağlanma
+    if (activeClients[connId]) return;
+
     const res = await pool.query("SELECT * FROM connections WHERE id = $1", [connId]);
     if (res.rows[0]) {
         await createConnection(res.rows[0]);

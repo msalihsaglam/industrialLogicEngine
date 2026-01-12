@@ -16,7 +16,7 @@ function App() {
   useEffect(() => {
     refreshAllData();
 
-    socket.on('liveData', (data) => setLiveData(prev => ({ ...prev, [data.tag]: data.value })));
+    socket.on('liveData', (data) => setLiveData(prev => ({ ...prev, [data.tagName]: data.value })));
     socket.on('alarm', (newAlarm) => setAlarms(prev => [newAlarm, ...prev].slice(0, 5)));
 
     return () => socket.off();
