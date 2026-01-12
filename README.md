@@ -67,3 +67,14 @@ Logic Engine, bu veriye abone (Subscribe) olur ve her değişimde veriyi alır.
 Gelen her veri için PostgreSQL veritabanındaki aktif kurallar sorgulanır.
 
 Eğer veri, veritabanındaki eşik değerini (threshold) aşarsa, konsola uyarı mesajı yazdırılır.
+
+
+Sistemin çalışması için şu an şu 3 terminalin açık olması gerektiğini unutma:
+
+Terminal (Docker): PostgreSQL çalışıyor olmalı (docker-compose up -d).
+
+Terminal (Simulator): node simulator.js çalışıyor olmalı.
+
+Terminal (Backend): node index.js çalışıyor olmalı. 
+
+Terminal (Frontend): npm run dev çalışıyor olmalı.
