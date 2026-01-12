@@ -1,25 +1,46 @@
 const pool = require("../config/db");
 const socketManager = require("../socket/socketManager");
 
-async function checkRules(tagName, currentValue) {
-    try {
-        const res = await pool.query("SELECT * FROM rules WHERE tag_name = $1 AND is_active = true", [tagName]);
-        const io = socketManager.getIo();
+async function checkRules(tagId, currentValue) {
+    const io = socketManager.getIo();
 
-        res.rows.forEach(rule => {
+    try {
+        // YENİ MANTIK: tag_name yerine tag_id ile sorguluyoruz
+        const res = await pool.query(
+            "SELECT * FROM rules WHERE tag_id = $1", 
+            [tagId]
+        );
+
+        const activeRules = res.rows;
+
+        activeRules.forEach(rule => {
             let isTriggered = false;
-            if (rule.operator === '>' && currentValue > rule.threshold) isTriggered = true;
-            if (rule.operator === '<' && currentValue < rule.threshold) isTriggered = true;
+            const threshold = parseFloat(rule.threshold);
+
+            // Operatör kontrolü
+            if (rule.operator === ">" && currentValue > threshold) isTriggered = true;
+            if (rule.operator === "<" && currentValue < threshold) isTriggered = true;
+            if (rule.operator === "==" && currentValue == threshold) isTriggered = true;
 
             if (isTriggered) {
-                io.emit("alarm", { 
-                    message: rule.alert_message, 
-                    value: currentValue, 
-                    time: new Date().toLocaleTimeString() 
-                });
+                const alarmPayload = {
+                    id: Date.now(),
+                    tagId: tagId,
+                    message: rule.alert_message,
+                    value: currentValue,
+                    threshold: threshold,
+                    time: new Date().toLocaleTimeString(),
+                    severity: 'critical' // İleride dinamik yapılabilir
+                };
+
+                // Frontend'e alarmı gönder
+                io.emit("alarm", alarmPayload);
+                // console.log("🚨 ALARM TETİKLENDİ:", alarmPayload.message);
             }
         });
-    } catch (err) { console.error("Logic Engine Hatası:", err); }
+    } catch (err) {
+        console.error("Logic Engine Hatası:", err.message);
+    }
 }
 
 module.exports = { checkRules };
