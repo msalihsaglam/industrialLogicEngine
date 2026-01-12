@@ -4,6 +4,7 @@ const cors = require("cors");
 const socketManager = require("./src/socket/socketManager");
 const { startOPCUA } = require("./src/services/opcuaService");
 const ruleRoutes = require("./src/routes/ruleRoutes");
+const connectionRoutes = require("./src/routes/connectionRoutes");
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ startOPCUA();
 
 // API Rotaları
 app.use("/api/rules", ruleRoutes);
+app.use("/api/connections", connectionRoutes);
 
 server.listen(3001, () => {
     console.log("🚀 Endüstriyel Sistem Modüler Yapıda Başlatıldı (Port 3001)");
