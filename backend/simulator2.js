@@ -40,6 +40,18 @@ async function createServer() {
         }
     });
 
+    // Sürekli değişen bir değişken ekleyelim (Makine Hızı)
+    let variableValueMachineSpeed = 1;
+    namespace.addVariable({
+        componentOf: device,
+        browseName: "Speed",
+        nodeId: "s=Speed", // ns=1;s=Speed
+        dataType: "Double",
+        value: {
+            get: () => new Variant({ dataType: DataType.Double, value: variableValueMachineSpeed })
+        }
+    });
+
     // Değeri her saniye rastgele değiştir
     setInterval(() => {
         variableValue = 10 + Math.random() * 50;
@@ -48,6 +60,11 @@ async function createServer() {
     // Değeri her saniye rastgele değiştir
     setInterval(() => {
         variableValueTemperature = 20 + Math.random() * 50;
+    }, 1000);
+
+        // Değeri her saniye rastgele değiştir
+    setInterval(() => {
+        variableValueMachineSpeed = 20 + Math.random() * 4;
     }, 1000);
 
     await server.start();

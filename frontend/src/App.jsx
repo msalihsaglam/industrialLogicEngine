@@ -6,26 +6,48 @@ import RuleManagement from './pages/RuleManagement';
 import ConnectionPage from './pages/ConnectionPage';
 
 function App() {
-  const [liveData, setLiveData] = useState({ Pressure: 0, Temperature: 0 });
+  const [liveData, setLiveData] = useState({}); 
   const [rules, setRules] = useState([]);
-  const [alarms, setAlarms] = useState([]); // Sadece o anki canlı uyarılar
+  const [alarms, setAlarms] = useState([]); 
   const [connections, setConnections] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
+  // Sayfa verilerini tazeleyen ana fonksiyon
+  const refreshAllData = () => {
+    api.getRules().then(res => setRules(res.data)).catch(err => console.error(err));
+    api.getConnections().then(res => setConnections(res.data)).catch(err => console.error(err));
+  };
+
   useEffect(() => {
     refreshAllData();
 
-    socket.on('liveData', (data) => setLiveData(prev => ({ ...prev, [data.tagName]: data.value })));
-    socket.on('alarm', (newAlarm) => setAlarms(prev => [newAlarm, ...prev].slice(0, 5)));
+    // 1. Canlı Veri Dinleyicisi (Gruplandırılmış Format: "Sistem:Tag")
+    socket.on('liveData', (data) => {
+      setLiveData(prev => ({ 
+        ...prev, 
+        [`${data.sourceName}:${data.tagName}`]: data.value 
+      }));
+    });
 
-    return () => socket.off();
+    // 2. Alarm Dinleyicisi
+    socket.on('alarm', (newAlarm) => {
+      setAlarms(prev => [newAlarm, ...prev].slice(0, 5));
+    });
+
+    // 3. Bağlantı Durumu Dinleyicisi (Online/Offline takibi için kritik)
+    socket.on('connectionStatusUpdate', (updatedConn) => {
+      setConnections(prev => prev.map(conn => 
+        conn.id === updatedConn.id ? { ...conn, status: updatedConn.status } : conn
+      ));
+    });
+
+    return () => {
+      socket.off('liveData');
+      socket.off('alarm');
+      socket.off('connectionStatusUpdate');
+    };
   }, []);
-
-  const refreshAllData = () => {
-    api.getRules().then(res => setRules(res.data));
-    api.getConnections().then(res => setConnections(res.data));
-  };
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -35,6 +57,7 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
+      {/* SIDEBAR */}
       <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col fixed h-full z-50 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && <div className="flex items-center gap-2 font-bold text-blue-400 tracking-wider"><Activity size={24} /> <span>LOGIC.IO</span></div>}
@@ -50,6 +73,7 @@ function App() {
         </nav>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className={`flex-1 flex flex-col h-screen transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <header className="h-16 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-8 sticky top-0 z-40">
            <div className="flex items-center gap-2 text-slate-400 text-sm"><span>Home</span> <ChevronRight size={14} /> <span className="text-blue-400 capitalize">{activeTab}</span></div>
@@ -59,9 +83,11 @@ function App() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
-          {activeTab === 'dashboard' && <Dashboard liveData={liveData} alarms={alarms} />}
+          {/* DASHBOARD - connections prop'u buraya eklendi */}
+          {activeTab === 'dashboard' && (
+            <Dashboard liveData={liveData} alarms={alarms} connections={connections} />
+          )}
           
-          {/* RULE MANAGEMENT - connections prop'u eklendi */}
           {activeTab === 'rules' && (
             <RuleManagement 
               rules={rules} 
@@ -70,7 +96,12 @@ function App() {
             />
           )}
           
-          {activeTab === 'connections' && <ConnectionPage connections={connections} onRefresh={refreshAllData} />}
+          {activeTab === 'connections' && (
+            <ConnectionPage 
+              connections={connections} 
+              onRefresh={refreshAllData} 
+            />
+          )}
         </div>
       </main>
     </div>

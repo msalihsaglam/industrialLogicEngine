@@ -19,5 +19,7 @@ export const api = {
   getTags: (connectionId) => axios.get(`${BASE_URL}/api/tags/${connectionId}`),
   addTag: (data) => axios.post(`${BASE_URL}/api/tags`, data),
   deleteTag: (id) => axios.delete(`${BASE_URL}/api/tags/${id}`),
+
+  updateConnection: (id, data) => axios.put(`${BASE_URL}/api/connections/${id}`, data),
 };
 
