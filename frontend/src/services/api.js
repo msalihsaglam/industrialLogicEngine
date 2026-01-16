@@ -12,7 +12,9 @@ export const api = {
   
   // Kural Rotaları
   getRules: () => axios.get(`${BASE_URL}/api/rules`),
-  addRule: (data) => axios.post(`${BASE_URL}/api/rules`, data),
+  //addRule: (data) => axios.post(`${BASE_URL}/api/rules`, data),
+  // src/services/api.js
+  addRule: (ruleData) => axios.post(`${BASE_URL}/api/rules`, ruleData),
   deleteRule: (id) => axios.delete(`${BASE_URL}/api/rules/${id}`),
 
   // ETİKET (TAG) ROTALARI - Eksik olan veya hata veren kısım burası
