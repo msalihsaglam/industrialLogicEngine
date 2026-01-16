@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, Trash2, Save, X, Database, Tag, Globe, Activity, Power, PowerOff } from 'lucide-react';
+import { PlusCircle, Trash2, Save, X, Database, Tag, Globe, Activity, Power, PowerOff, Edit2 } from 'lucide-react';
 import { api } from '../services/api';
 
 const ConnectionPage = ({ connections, onRefresh }) => {
@@ -7,6 +7,7 @@ const ConnectionPage = ({ connections, onRefresh }) => {
   // Modal States
   const [isConnModalOpen, setIsConnModalOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // YENİ
   
   // Data States
   const [selectedConn, setSelectedConn] = useState(null);
@@ -14,7 +15,33 @@ const ConnectionPage = ({ connections, onRefresh }) => {
   
   // Form States
   const [newConnData, setNewConnData] = useState({ name: '', endpoint_url: '' });
+  const [editConnData, setEditConnData] = useState({ id: '', name: '', endpoint_url: '' }); // YENİ
   const [newTagData, setNewTagData] = useState({ tag_name: '', node_id: '', unit: '' });
+
+  // --- DÜZENLEME İŞLEMLERİ (Edit) ---
+  const openEditModal = (conn) => {
+    setEditConnData({
+      id: conn.id,
+      name: conn.name,
+      endpoint_url: conn.endpoint_url
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateConnection = async (e) => {
+    e.preventDefault();
+    try {
+      await api.updateConnection(editConnData.id, {
+        name: editConnData.name,
+        endpoint_url: editConnData.endpoint_url
+      });
+      setIsEditModalOpen(false);
+      onRefresh();
+    } catch (err) {
+      console.error("Güncelleme hatası:", err);
+      alert("Bağlantı güncellenemedi.");
+    }
+  };
 
   // --- AKTİF / PASİF GEÇİŞİ ---
   const handleToggleEnabled = async (conn) => {
@@ -27,7 +54,7 @@ const ConnectionPage = ({ connections, onRefresh }) => {
     }
   };
 
-  // --- BAĞLANTI İŞLEMLERİ ---
+  // --- BAĞLANTI İŞLEMLERİ (Ekleme/Silme) ---
   const handleAddConnection = async (e) => {
     e.preventDefault();
     try {
@@ -79,7 +106,7 @@ const ConnectionPage = ({ connections, onRefresh }) => {
   const handleDeleteConnection = async (id) => {
     if (window.confirm("Bu bağlantıyı ve tüm taglerini silmek istediğinize emin misiniz?")) {
       try {
-        await api.deleteConnection(id); // API'de bu fonksiyonun olduğundan emin ol
+        await api.deleteConnection(id);
         onRefresh();
       } catch (err) {
         alert("Silme işlemi başarısız.");
@@ -130,16 +157,28 @@ const ConnectionPage = ({ connections, onRefresh }) => {
                   </div>
                </div>
                
-               <button 
-                onClick={() => handleToggleEnabled(conn)}
-                className={`p-2.5 rounded-xl transition-all shadow-inner ${
-                  conn.enabled 
-                  ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' 
-                  : 'bg-slate-800 text-slate-500 border border-slate-700'
-                }`}
-               >
-                {conn.enabled ? <Power size={18} /> : <PowerOff size={18} />}
-               </button>
+               <div className="flex flex-col gap-2">
+                 <button 
+                  onClick={() => handleToggleEnabled(conn)}
+                  className={`p-2.5 rounded-xl transition-all shadow-inner ${
+                    conn.enabled 
+                    ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600/20' 
+                    : 'bg-slate-800 text-slate-500 border border-slate-700 hover:bg-slate-700'
+                  }`}
+                  title={conn.enabled ? "Disable Source" : "Enable Source"}
+                 >
+                  {conn.enabled ? <Power size={18} /> : <PowerOff size={18} />}
+                 </button>
+                 
+                 {/* DÜZENLE BUTONU */}
+                 <button 
+                  onClick={() => openEditModal(conn)}
+                  className="p-2.5 rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-blue-400 hover:border-blue-400/30 transition-all"
+                  title="Edit Source"
+                 >
+                   <Edit2 size={18} />
+                 </button>
+               </div>
             </div>
             
             <div className="flex gap-2 mt-8">
@@ -177,7 +216,38 @@ const ConnectionPage = ({ connections, onRefresh }) => {
         ))}
       </div>
 
-      {/* --- MODAL: NEW CONNECTION --- */}
+      {/* --- MODAL: EDIT CONNECTION --- */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[210] p-4">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2rem] w-full max-w-md shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400"><Edit2 size={24}/></div>
+                <h3 className="text-xl font-bold text-slate-100">Edit Data Source</h3>
+              </div>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-500 hover:text-white"><X size={24}/></button>
+            </div>
+
+            <form onSubmit={handleUpdateConnection} className="space-y-5">
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1.5 uppercase font-bold tracking-widest ml-1">Friendly Name</label>
+                <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm outline-none focus:border-amber-500 text-slate-100"
+                  value={editConnData.name} onChange={e => setEditConnData({...editConnData, name: e.target.value})} required />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-1.5 uppercase font-bold tracking-widest ml-1">Endpoint URL</label>
+                <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm font-mono outline-none focus:border-amber-500 text-slate-100"
+                  value={editConnData.endpoint_url} onChange={e => setEditConnData({...editConnData, endpoint_url: e.target.value})} required />
+              </div>
+              <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 mt-4 transition-all">
+                <Save size={18}/> Update Settings
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: NEW CONNECTION --- (Aynı Kaldı) */}
       {isConnModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[200] p-4">
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2rem] w-full max-w-md shadow-2xl animate-in zoom-in-95">
@@ -208,7 +278,7 @@ const ConnectionPage = ({ connections, onRefresh }) => {
         </div>
       )}
 
-      {/* --- MODAL: TAG MANAGEMENT --- */}
+      {/* --- MODAL: TAG MANAGEMENT --- (Aynı Kaldı) */}
       {isTagModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[200] p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95">

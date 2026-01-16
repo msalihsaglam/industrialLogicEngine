@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Save, Trash2, Activity, Info, AlertTriangle, Zap, ArrowRightLeft } from 'lucide-react';
+import { PlusCircle, Save, Trash2, Activity, AlertTriangle, Zap, ArrowRightLeft, Edit3, XCircle } from 'lucide-react';
 import { api } from '../services/api';
 
 const RuleManagement = ({ rules, connections, onRefresh }) => {
-  // 1. Yeni Kural State'i (Yeni Tablo Yapısına Uygun)
+  // 1. State Yönetimi
+  const [editingId, setEditingId] = useState(null); // Düzenlenen kuralın ID'si
   const [newRule, setNewRule] = useState({
     name: '',
     tag_id: '',
-    logic_type: 'static', // 'static' veya 'compare'
+    logic_type: 'static',
     operator: '>',
     static_value: '',
     target_tag_id: '',
@@ -16,13 +17,12 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     message: ''
   });
 
-  // 2. Form Kontrol State'leri
-  const [sourceConnId, setSourceConnId] = useState(''); // Tetikleyici sistem
-  const [targetConnId, setTargetConnId] = useState(''); // Kıyaslanacak sistem
+  const [sourceConnId, setSourceConnId] = useState('');
+  const [targetConnId, setTargetConnId] = useState('');
   const [sourceTags, setSourceTags] = useState([]);
   const [targetTags, setTargetTags] = useState([]);
 
-  // Tetikleyici Tag listesini çek
+  // Tag Listelerini Yükleme
   useEffect(() => {
     if (sourceConnId) {
       api.getTags(sourceConnId).then(res => setSourceTags(res.data));
@@ -31,7 +31,6 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     }
   }, [sourceConnId]);
 
-  // Kıyaslanacak (Target) Tag listesini çek
   useEffect(() => {
     if (targetConnId) {
       api.getTags(targetConnId).then(res => setTargetTags(res.data));
@@ -40,28 +39,62 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     }
   }, [targetConnId]);
 
-  const handleAddRule = async (e) => {
-    e.preventDefault();
-    if (!newRule.name || !newRule.tag_id || !newRule.message) {
-      return alert("Lütfen zorunlu alanları (İsim, Tag, Mesaj) doldurun.");
-    }
-
-    try {
-      await api.addRule(newRule);
-      setNewRule({
-        name: '', tag_id: '', logic_type: 'static', operator: '>',
-        static_value: '', target_tag_id: '', offset_value: 0,
-        severity: 'warning', message: ''
-      });
-      setSourceConnId('');
-      setTargetConnId('');
-      onRefresh();
-    } catch (err) {
-      alert("Kural eklenemedi. Veritabanı sütunlarını kontrol edin.");
-    }
+  // --- DÜZENLEME MODUNU BAŞLAT ---
+  const handleEditInit = (rule) => {
+    setEditingId(rule.id);
+    setNewRule({
+      name: rule.name,
+      tag_id: rule.tag_id,
+      logic_type: rule.logic_type,
+      operator: rule.operator,
+      static_value: rule.static_value || '',
+      target_tag_id: rule.target_tag_id || '',
+      offset_value: rule.offset_value || 0,
+      severity: rule.severity,
+      message: rule.message
+    });
+    // Not: sourceConnId ve targetConnId manuel seçilmelidir 
+    // veya kural nesnesinde connection_id bilgisi backend'den gelmelidir.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Severity Renk Belirleyici
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNewRule({
+      name: '', tag_id: '', logic_type: 'static', operator: '>',
+      static_value: '', target_tag_id: '', offset_value: 0,
+      severity: 'warning', message: ''
+    });
+    setSourceConnId('');
+    setTargetConnId('');
+  };
+
+  // --- KAYDET / GÜNCELLE İŞLEMİ ---
+const handleSaveRule = async (e) => {
+  e.preventDefault();
+  
+  // Boş değerleri temizleyerek gönderiyoruz
+  const payload = {
+    ...newRule,
+    static_value: newRule.logic_type === 'static' ? newRule.static_value : null,
+    target_tag_id: newRule.logic_type === 'compare' ? newRule.target_tag_id : null,
+  };
+
+  try {
+    if (editingId) {
+      await api.updateRule(editingId, payload); // payload kullanıyoruz
+    } else {
+      await api.addRule(payload);
+    }
+    
+    handleCancelEdit();
+    onRefresh();
+  } catch (err) {
+    console.error("Hata Detayı:", err.response?.data || err.message); // Konsola detayı yazdır
+    alert("İşlem başarısız. Konsolu (F12) kontrol edin.");
+  }
+};
+
   const getSevColor = (sev) => {
     if (sev === 'critical') return 'text-red-500 bg-red-500/10 border-red-500/20';
     if (sev === 'warning') return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
@@ -69,24 +102,30 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
         
-        {/* KURAL EKLEME FORMU (Lego Builder) */}
-        <div className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl h-fit sticky top-8">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-blue-400">
-            <Zap size={20} /> Logic Builder
-          </h3>
+        {/* KURAL FORMU */}
+        <div className={`xl:col-span-1 border rounded-[2rem] p-6 shadow-2xl h-fit sticky top-8 transition-colors duration-500 ${editingId ? 'bg-slate-800/40 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className={`text-lg font-bold flex items-center gap-2 ${editingId ? 'text-amber-400' : 'text-blue-400'}`}>
+              {editingId ? <Edit3 size={20} /> : <Zap size={20} />}
+              {editingId ? 'Edit Logic Rule' : 'Logic Builder'}
+            </h3>
+            {editingId && (
+              <button onClick={handleCancelEdit} className="text-slate-500 hover:text-white transition-colors">
+                <XCircle size={20} />
+              </button>
+            )}
+          </div>
           
-          <form onSubmit={handleAddRule} className="space-y-4">
-            {/* Kural İsmi */}
+          <form onSubmit={handleSaveRule} className="space-y-4">
             <div>
               <label className="text-[10px] text-slate-500 block mb-1 uppercase font-black tracking-widest">Rule Name</label>
               <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500" placeholder="e.g. Pump Delta Check" />
             </div>
 
-            {/* Severity */}
             <div>
               <label className="text-[10px] text-slate-500 block mb-1 uppercase font-black tracking-widest">Severity</label>
               <div className="flex gap-2">
@@ -101,20 +140,20 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
 
             <hr className="border-slate-800 my-4" />
 
-            {/* TETİKLEYİCİ (SOURCE) */}
+            {/* TETİKLEYİCİ */}
             <div className="space-y-3">
-              <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic">Trigger Source</label>
-              <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none">
+              <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic">Trigger Source {editingId && '(Re-select if needed)'}</label>
+              <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none focus:border-blue-500">
                 <option value="">Select System...</option>
                 {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none disabled:opacity-20">
+              <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none disabled:opacity-20 focus:border-blue-500">
                 <option value="">Select Tag...</option>
                 {sourceTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
               </select>
             </div>
 
-            {/* OPERATOR & LOGIC TYPE */}
+            {/* OPERATOR */}
             <div className="flex items-center gap-4 py-2">
                 <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm font-bold text-blue-400">
                    {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
@@ -156,11 +195,11 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
             <div>
               <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold tracking-widest">Alert Message</label>
               <textarea value={newRule.message} onChange={(e) => setNewRule({...newRule, message: e.target.value})} 
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs outline-none h-20 resize-none" placeholder="What should the operator know?" />
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs outline-none h-20 resize-none focus:border-blue-500" placeholder="Alarm details..." />
             </div>
 
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-400 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
-              <Save size={18} /> DEPLOY LOGIC
+            <button type="submit" className={`w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${editingId ? 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-500' : 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-400'}`}>
+              <Save size={18} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY LOGIC'}
             </button>
           </form>
         </div>
@@ -180,7 +219,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                   <p className="text-slate-600 italic">No custom logic deployed for the current shift.</p>
                 </div>
               ) : rules.map((rule) => (
-                <div key={rule.id} className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-slate-700 transition-all group">
+                <div key={rule.id} className={`p-6 rounded-[2rem] border flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-xl shadow-amber-500/5' : 'bg-slate-900 border-slate-800'}`}>
                   <div className="flex items-center gap-6">
                     <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${getSevColor(rule.severity)}`}>
                        <AlertTriangle size={24} />
@@ -205,8 +244,21 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3 self-end md:self-center">
-                    <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-500 hover:text-red-500 rounded-xl transition-all">
+                  <div className="flex items-center gap-2 self-end md:self-center">
+                    {/* DÜZENLE BUTONU */}
+                    <button 
+                      onClick={() => handleEditInit(rule)} 
+                      className="p-3 bg-slate-800 hover:bg-amber-500/10 text-slate-500 hover:text-amber-500 rounded-xl transition-all"
+                      title="Edit Rule"
+                    >
+                      <Edit3 size={18} />
+                    </button>
+                    {/* SİL BUTONU */}
+                    <button 
+                      onClick={() => api.deleteRule(rule.id).then(onRefresh)} 
+                      className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-500 hover:text-red-500 rounded-xl transition-all"
+                      title="Delete Rule"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </div>

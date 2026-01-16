@@ -23,5 +23,8 @@ export const api = {
   deleteTag: (id) => axios.delete(`${BASE_URL}/api/tags/${id}`),
 
   updateConnection: (id, data) => axios.put(`${BASE_URL}/api/connections/${id}`, data),
+
+  updateRule: (id, data) => axios.put(`${BASE_URL}/api/rules/${id}`, data),
+
 };
 

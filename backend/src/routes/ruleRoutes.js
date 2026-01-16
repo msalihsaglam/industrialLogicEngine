@@ -12,22 +12,15 @@ router.get("/", async (req, res) => {
     }
 });
 
-// 2. Yeni Nesil Kural Ekleme (Yeni sütunlarla uyumlu)
+// 2. Yeni Kural Ekleme
 router.post("/", async (req, res) => {
     const { 
-        name, 
-        tag_id, 
-        logic_type, 
-        operator, 
-        static_value, 
-        target_tag_id, 
-        offset_value, 
-        severity, 
-        message 
+        name, tag_id, logic_type, operator, 
+        static_value, target_tag_id, offset_value, 
+        severity, message 
     } = req.body;
 
     try {
-        // Postgres'e gönderilecek sorguyu yeni sütunlara göre hazırlıyoruz
         const query = `
             INSERT INTO rules (
                 name, tag_id, logic_type, operator, 
@@ -37,7 +30,6 @@ router.post("/", async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
             RETURNING *`;
 
-        // Boş string gelmesi durumunda DB'nin hata vermemesi için null kontrolü yapıyoruz
         const values = [
             name, 
             tag_id || null, 
@@ -51,15 +43,64 @@ router.post("/", async (req, res) => {
         ];
 
         const result = await pool.query(query, values);
-        console.log(`✅ Yeni kural eklendi: ${name}`);
         res.json(result.rows[0]);
     } catch (err) {
-        console.error("❌ Kural ekleme hatası:", err.message);
-        res.status(500).json({ error: "Veritabanı hatası: " + err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// 3. Kural Silme
+// 3. Kural Güncelleme (EDIT) - YENİ EKLENDİ
+router.put("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { 
+        name, tag_id, logic_type, operator, 
+        static_value, target_tag_id, offset_value, 
+        severity, message 
+    } = req.body;
+
+    try {
+        const query = `
+            UPDATE rules SET 
+                name = $1, 
+                tag_id = $2, 
+                logic_type = $3, 
+                operator = $4, 
+                static_value = $5, 
+                target_tag_id = $6, 
+                offset_value = $7, 
+                severity = $8, 
+                message = $9
+            WHERE id = $10 
+            RETURNING *`;
+
+        const values = [
+            name, 
+            tag_id || null, 
+            logic_type, 
+            operator, 
+            static_value === "" ? null : static_value, 
+            target_tag_id === "" ? null : target_tag_id, 
+            offset_value || 0, 
+            severity, 
+            message,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Kural bulunamadı." });
+        }
+
+        console.log(`📝 Kural güncellendi: ${name}`);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("❌ Kural güncelleme hatası:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. Kural Silme
 router.delete("/:id", async (req, res) => {
     try {
         const { id } = req.params;

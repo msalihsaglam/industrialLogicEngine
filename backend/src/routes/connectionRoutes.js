@@ -17,13 +17,10 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
     const { name, endpoint_url } = req.body;
     try {
-        // Yeni bağlantıyı 'enabled' (aktif) olarak kaydediyoruz
         const query = "INSERT INTO connections (name, endpoint_url, enabled, status) VALUES ($1, $2, true, false) RETURNING *";
         const result = await pool.query(query, [name, endpoint_url]);
         
         const newConn = result.rows[0];
-        
-        // Cihaz eklendiği an bağlantı girişimini başlat
         await addNewConnection(newConn.id); 
         
         res.json(newConn);
@@ -32,33 +29,42 @@ router.post("/", async (req, res) => {
     }
 });
 
-// 3. Bağlantı durumunu (Enabled/Disabled) GÜNCELLE
+// 3. Bağlantı Düzenleme ve Durum Güncelleme (EDIT & TOGGLE)
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
-    const { enabled } = req.body;
+    const { name, endpoint_url, enabled } = req.body;
     
     try {
-        // Veritabanını güncelle
-        const result = await pool.query(
-            "UPDATE connections SET enabled = $1 WHERE id = $2 RETURNING *",
-            [enabled, id]
-        );
+        // COALESCE kullanarak sadece gönderilen alanları güncelliyoruz, diğerleri aynı kalıyor
+        const query = `
+            UPDATE connections 
+            SET name = COALESCE($1, name), 
+                endpoint_url = COALESCE($2, endpoint_url), 
+                enabled = COALESCE($3, enabled) 
+            WHERE id = $4 
+            RETURNING *`;
         
+        const result = await pool.query(query, [name, endpoint_url, enabled, id]);
         const updatedConn = result.rows[0];
 
-        // --- CANLI TETİKLEME MANTIĞI ---
-        if (enabled === false) {
-            // Kullanıcı 'Pasif' yaptıysa: Canlı bağlantıyı anında kopar
-            console.log(`🔌 [${updatedConn.name}] kullanıcı tarafından pasif yapıldı.`);
+        // --- CANLI YÖNETİM MANTIĞI ---
+        
+        if (updatedConn.enabled === false) {
+            // Durum 'Pasif'e çekildiyse bağlantıyı her durumda durdur
+            console.log(`🛑 [${updatedConn.name}] Bağlantısı durduruluyor...`);
             await stopConnection(id);
-        } else {
-            // Kullanıcı 'Aktif' yaptıysa: Bağlantıyı yeniden kur
-            console.log(`🔌 [${updatedConn.name}] kullanıcı tarafından aktif edildi.`);
+        } 
+        else {
+            // Eğer durum 'Aktif' ise (veya aktif kalmaya devam ediyorsa):
+            // Ayarlar (URL/İsim) değişmiş olabileceği için eskisini kapatıp yenisini başlatıyoruz (Restart)
+            console.log(`🔄 [${updatedConn.name}] Ayarlar güncelleniyor, bağlantı tazeleniyor...`);
+            await stopConnection(id);
             await createConnection(updatedConn);
         }
 
         res.json(updatedConn);
     } catch (err) {
+        console.error("Bağlantı güncelleme hatası:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -67,12 +73,8 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     try {
-        // Önce canlı bağlantıyı durdur
         await stopConnection(id);
-        
-        // Sonra veritabanından sil
         await pool.query("DELETE FROM connections WHERE id = $1", [id]);
-        
         res.json({ message: "Bağlantı başarıyla silindi." });
     } catch (err) {
         res.status(500).json({ error: err.message });
