@@ -21,7 +21,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     severity: 'warning',
     message: '',
     is_complex: false,
-    enabled: true // Varsayılan aktif
+    enabled: true 
   });
 
   const [complexLogic, setComplexLogic] = useState({
@@ -59,14 +59,11 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     if (targetConnId) api.getTags(targetConnId).then(res => setTargetTags(res.data));
   }, [targetConnId]);
 
-  // --- AKTİF / PASİF YAPMA FONKSİYONU ---
   const handleToggleEnable = async (rule) => {
     try {
-      // Mevcut enabled durumunun tersini gönderiyoruz
       await api.updateRule(rule.id, { ...rule, enabled: !rule.enabled });
       onRefresh(); 
     } catch (err) {
-      console.error("Kural durumu güncellenemedi:", err);
       alert("Durum güncellenirken hata oluştu.");
     }
   };
@@ -241,12 +238,26 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-6">
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
+    <div className="max-w-[1600px] mx-auto space-y-10 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-4">
+      
+      {/* STANDART SAYFA BAŞLIĞI */}
+      <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Logic Builder</h1>
+          <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">
+            Heuristic Engine & Complex Decision Mapping
+          </p>
+        </div>
+        <div className="bg-slate-900 px-5 py-2 rounded-full border border-slate-800 text-[10px] font-black text-slate-400 shadow-xl">
+           {rules.length} ACTIVE HEURISTICS
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-10 pt-4">
         
-        {/* KURAL FORMU */}
-        <div className={`xl:col-span-2 border rounded-[2.5rem] p-8 shadow-2xl h-fit sticky top-8 transition-all duration-500 ${editingId ? 'bg-slate-800/40 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
-          <div className="flex justify-between items-center mb-8">
+        {/* KURAL FORMU - SOL SÜTUN */}
+        <div className={`xl:col-span-2 border rounded-[2.5rem] p-8 shadow-2xl h-fit sticky top-8 transition-all duration-500 ${editingId ? 'bg-amber-500/5 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex justify-between items-center mb-10">
             <h3 className={`text-xl font-bold flex items-center gap-3 ${editingId ? 'text-amber-400' : 'text-blue-400'}`}>
               {editingId ? <Edit3 size={24} /> : <Zap size={24} />}
               {editingId ? 'Edit Logic Rule' : 'Logic Builder Engine'}
@@ -290,7 +301,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                </div>
             </div>
 
-            <hr className="border-slate-800" />
+            <hr className="border-slate-800/50" />
 
             {!isComplex ? (
               <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -307,12 +318,12 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400">
+                    <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400 outline-none">
                        {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
                     </select>
                     <div className="flex-1 flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>STATIC</button>
-                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-orange-600 text-white' : 'text-slate-600'}`}>COMPARE</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-white'}`}>STATIC</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-orange-600 text-white' : 'text-slate-600 hover:text-white'}`}>COMPARE</button>
                     </div>
                 </div>
 
@@ -360,69 +371,66 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                 className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-300 outline-none h-20 resize-none focus:border-blue-500 transition-all" placeholder="Instructions for operator..." />
             </div>
 
-            <button type="submit" className={`w-full text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 hover:scale-[1.01] ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
-              <Save size={20} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY LOGIC ENGINE'}
-            </button>
+            <div className="flex gap-4">
+              {editingId && (
+                <button type="button" onClick={handleCancelEdit} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">
+                  Cancel
+                </button>
+              )}
+              <button type="submit" className={`flex-[2] text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 hover:scale-[1.01] ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
+                <Save size={20} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY ENGINE'}
+              </button>
+            </div>
           </form>
         </div>
 
-        {/* KURALLAR LİSTESİ */}
-        <div className="xl:col-span-3 space-y-6">
-           <div className="flex justify-between items-center px-6">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] flex items-center gap-3">
-                <ArrowRightLeft size={18} className="text-blue-500" /> ACTIVE HEURISTICS
-              </h3>
-              <div className="bg-slate-900 px-5 py-2 rounded-full border border-slate-800 text-[10px] font-black text-slate-400 shadow-lg">
-                {rules.length} RULES DEPLOYED
-              </div>
-           </div>
-           
-           <div className="grid grid-cols-1 gap-5">
+        {/* KURALLAR LİSTESİ - SAĞ SÜTUN */}
+        <div className="xl:col-span-3 space-y-8">
+           <div className="grid grid-cols-1 gap-6">
              {rules.map((rule) => {
-               // Durum kontrolü için değişken
                const isEnabled = rule.enabled !== false; 
 
                return (
-                <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 transition-all group relative overflow-hidden ${
+                <div key={rule.id} className={`p-8 rounded-[3rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 transition-all group relative overflow-hidden ${
                   !isEnabled 
                     ? 'bg-slate-950/50 border-slate-900 opacity-60 grayscale-[0.5]' 
                     : editingId === rule.id 
                       ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl' 
-                      : 'bg-slate-900 border-slate-800 shadow-xl'
+                      : 'bg-slate-900/60 border-slate-800 shadow-xl hover:border-slate-600'
                 }`}>
                   <div className="flex items-center gap-8">
-                    <div className={`w-16 h-16 rounded-3xl border flex items-center justify-center shrink-0 shadow-lg transition-all ${
+                    <div className={`w-20 h-20 rounded-[1.5rem] border flex items-center justify-center shrink-0 shadow-xl transition-all ${
                       isEnabled ? getSevColor(rule.severity) : 'bg-slate-800 border-slate-700 text-slate-600'
                     }`}>
-                       {rule.is_complex ? <Layers size={32} /> : <Zap size={32} />}
+                       {rule.is_complex ? <Layers size={36} /> : <Zap size={36} />}
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h4 className={`text-lg font-black transition-colors ${isEnabled ? 'text-slate-100' : 'text-slate-500'}`}>{rule.name}</h4>
+                        <h4 className={`text-xl font-black transition-colors ${isEnabled ? 'text-slate-100' : 'text-slate-500'}`}>{rule.name}</h4>
                         {rule.is_complex && (
-                          <span className={`text-[9px] px-3 py-1 rounded-full border font-black tracking-widest uppercase ${
+                          <span className={`text-[9px] px-3 py-1 rounded-lg border font-black tracking-widest uppercase ${
                             isEnabled ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-slate-800 text-slate-600 border-slate-700'
                           }`}>COMPLEX</span>
                         )}
-                        <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border shadow-sm transition-all ${
+                        <span className={`text-[9px] px-3 py-1 rounded-lg font-black uppercase border shadow-sm transition-all ${
                           isEnabled ? getSevColor(rule.severity) : 'bg-slate-800 border-slate-700 text-slate-600'
                         }`}>
                           {isEnabled ? rule.severity : 'PASSIVE'}
                         </span>
                       </div>
-                      <div className={`text-sm font-mono mb-2 transition-colors ${isEnabled ? 'text-slate-500' : 'text-slate-700'}`}>
+                      <div className={`text-xs font-mono mb-2 transition-colors flex items-center gap-2 ${isEnabled ? 'text-slate-500' : 'text-slate-700'}`}>
+                        <ArrowRightLeft size={12} className="opacity-50" />
                         {rule.is_complex ? (
-                          <span className="italic tracking-tight">"Hierarchical multi-tag decision tree logic"</span>
+                          <span className="italic tracking-tight opacity-50 uppercase text-[10px]">Decision Tree Hierarchy</span>
                         ) : (
-                          <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
+                          <span className="opacity-70 uppercase tracking-tighter">IF [{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
                         )}
                       </div>
-                      <p className={`text-sm italic font-medium leading-relaxed transition-colors ${isEnabled ? 'text-slate-500' : 'text-slate-800'}`}>"{rule.message}"</p>
+                      <p className={`text-sm italic font-medium leading-relaxed transition-colors ${isEnabled ? 'text-slate-400' : 'text-slate-800'}`}>"{rule.message}"</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 self-end lg:self-center z-10">
-                    {/* AKTİF / PASİF TOGGLE BUTONU */}
                     <button 
                       onClick={() => handleToggleEnable(rule)} 
                       className={`p-4 rounded-2xl transition-all shadow-md active:scale-90 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest border ${
@@ -430,14 +438,13 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                         ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20' 
                         : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
                       }`}
-                      title={isEnabled ? "Deactivate Rule" : "Activate Rule"}
                     >
                       <Power size={18} />
-                      <span className="hidden sm:inline">{isEnabled ? "Active" : "Passive"}</span>
+                      <span className="hidden sm:inline">{isEnabled ? "Active" : "Standby"}</span>
                     </button>
 
-                    <button onClick={() => handleEditInit(rule)} className="p-4 bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-500 rounded-2xl transition-all shadow-md active:scale-90"><Edit3 size={20} /></button>
-                    <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-4 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-2xl transition-all shadow-md active:scale-90"><Trash2 size={20} /></button>
+                    <button onClick={() => handleEditInit(rule)} className="p-4 bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-500 rounded-2xl transition-all shadow-md active:scale-95 border border-transparent hover:border-amber-500/30"><Edit3 size={20} /></button>
+                    <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-4 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-2xl transition-all shadow-md active:scale-95 border border-transparent hover:border-red-500/30"><Trash2 size={20} /></button>
                   </div>
                 </div>
                );

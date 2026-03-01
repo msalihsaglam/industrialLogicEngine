@@ -29,18 +29,22 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
   const activeConnections = connections.filter(c => c.enabled);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-10">
+    <div className="max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700 pb-20 px-4">
       
-      {/* ÜST BİLGİ PANELİ: SİSTEM ÖZETİ */}
-      <div className="flex justify-between items-end px-4">
+      {/* STANDART SAYFA BAŞLIĞI */}
+      <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Operations Dashboard</h1>
-          <p className="text-slate-500 text-[10px] font-black tracking-[0.3em] mt-1">Real-time Telemetry Data Stream</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Operations</h1>
+          <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">
+            Real-time Telemetry & Live System Monitoring
+          </p>
         </div>
         <div className="flex gap-4">
-          <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-lg">
+          <div className="bg-slate-900 border border-slate-800 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-xl">
              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{activeConnections.length} Active Nodes</span>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               {activeConnections.length} Active Nodes
+             </span>
           </div>
         </div>
       </div>
@@ -48,10 +52,10 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
       {/* CANLI VERİ AKIŞI GRUPLARI */}
       {activeConnections.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 bg-slate-900/40 border-2 border-dashed border-slate-800 rounded-[3rem]">
-          <div className="p-6 bg-slate-800/50 rounded-full mb-4 text-slate-600">
-            <CircleOff size={48} />
+          <div className="p-8 bg-slate-800/50 rounded-full mb-6 text-slate-700">
+            <CircleOff size={56} />
           </div>
-          <h3 className="text-xl font-bold text-slate-400 tracking-tight">System Offline</h3>
+          <h3 className="text-2xl font-black text-slate-400 tracking-tighter uppercase">System Offline</h3>
           <p className="text-slate-600 text-sm mt-2 italic font-medium">Please activate your PLC connections in Connectivity Manager.</p>
         </div>
       ) : (
@@ -59,25 +63,29 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
           const connectionTags = Object.keys(liveData).filter(key => key.startsWith(`${conn.name}:`));
 
           return (
-            <div key={conn.id} className="bg-slate-900/50 border border-slate-800/50 rounded-[3rem] p-8 shadow-inner transition-all hover:bg-slate-900/80">
+            <div key={conn.id} className="bg-slate-900/40 border border-slate-800/50 rounded-[3rem] p-8 shadow-inner transition-all hover:bg-slate-900/60 group">
               
               {/* Grup Başlığı ve Bağlantı Durumu */}
-              <div className="flex items-center justify-between mb-8 px-2">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${conn.status ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-blue-500/5' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                    <Cpu size={24} />
+              <div className="flex items-center justify-between mb-10 px-2">
+                <div className="flex items-center gap-5">
+                  <div className={`p-4 rounded-[1.5rem] transition-all shadow-xl ${
+                    conn.status 
+                    ? 'bg-blue-600 text-white shadow-blue-600/20' 
+                    : 'bg-slate-800 text-slate-500 border border-slate-700'
+                  }`}>
+                    <Cpu size={28} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-100 tracking-tight leading-none">{conn.name}</h2>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[9px] text-slate-500 font-mono uppercase tracking-widest bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    <h2 className="text-2xl font-black text-slate-100 tracking-tight leading-none uppercase">{conn.name}</h2>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-[9px] text-slate-500 font-mono uppercase tracking-widest bg-slate-950 px-3 py-1 rounded-lg border border-slate-800/50 group-hover:border-slate-700 transition-colors">
                         {conn.endpoint_url}
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                <div className={`flex items-center gap-3 px-5 py-2 rounded-2xl border text-[10px] font-black tracking-[0.2em] transition-all ${
+                <div className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl border text-[10px] font-black tracking-[0.2em] transition-all shadow-lg ${
                   conn.status 
                     ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5" 
                     : "bg-red-500/5 text-red-500 border-red-500/20 shadow-red-500/5"
@@ -88,47 +96,47 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
               </div>
 
               {/* Sensör Kartları Grid Düzeni */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {connectionTags.map((fullKey) => {
                   const tagName = fullKey.split(':')[1];
                   return (
-                    <div key={fullKey} className="bg-slate-950/80 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl group relative overflow-hidden transition-all hover:border-slate-600 hover:shadow-blue-500/5">
+                    <div key={fullKey} className="bg-slate-950/60 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl group/card relative overflow-hidden transition-all hover:border-slate-600 hover:scale-[1.02]">
                       
-                      {/* Kart Arkaplan Deseni (Hafif) */}
-                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                      {/* Kart Arkaplan İkonu */}
+                      <div className="absolute top-0 right-0 p-6 opacity-5 group-hover/card:opacity-10 transition-opacity transform group-hover/card:rotate-12 duration-500">
                          {getIcon(tagName)}
                       </div>
 
-                      <h2 className="text-slate-500 text-[10px] mb-6 flex items-center gap-2 uppercase font-black tracking-[0.3em]">
-                        {getIcon(tagName)} {tagName}
+                      <h2 className="text-slate-500 text-[10px] mb-8 flex items-center gap-3 uppercase font-black tracking-[0.3em]">
+                        <span className="p-1.5 bg-slate-900 rounded-lg">{getIcon(tagName)}</span> {tagName}
                       </h2>
 
-                      <div className={`text-6xl font-black tracking-tighter ${getColorClass(tagName)} flex items-baseline gap-2`}>
+                      <div className={`text-7xl font-black tracking-tighter ${getColorClass(tagName)} flex items-baseline gap-3`}>
                         {formatVal(liveData[fullKey])} 
                         <span className="text-xs text-slate-700 font-black uppercase tracking-[0.2em] italic">Unit</span>
                       </div>
 
-                      {/* Sinyal ve Güncelleme Bilgisi */}
-                      <div className="mt-8 pt-6 border-t border-slate-800/50 flex items-center justify-between">
-                         <div className="flex items-center gap-2">
-                            <Radio size={12} className={conn.status ? "text-emerald-500 animate-pulse" : "text-slate-700"} />
-                            <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">
-                              {conn.status ? "Signal: Optimal" : "Signal: Dead"}
+                      {/* Alt Bilgi Barı */}
+                      <div className="mt-10 pt-6 border-t border-slate-800/50 flex items-center justify-between">
+                         <div className="flex items-center gap-2.5">
+                            <Radio size={14} className={conn.status ? "text-emerald-500 animate-pulse" : "text-slate-800"} />
+                            <span className="text-[10px] text-slate-600 font-black uppercase tracking-tighter">
+                              {conn.status ? "Signal Stable" : "Link Interrupted"}
                             </span>
                          </div>
-                         <div className="text-[9px] text-slate-700 font-black font-mono">
-                            SYNC_OK: {new Date().getSeconds()}S
+                         <div className="text-[10px] text-slate-800 font-black font-mono tracking-widest">
+                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                          </div>
                       </div>
                     </div>
                   );
                 })}
                 
-                {/* Eğer Bağlantı Var Ama Tag Yoksa */}
+                {/* Boş Durum: Veri Bekleniyor */}
                 {conn.status && connectionTags.length === 0 && (
-                  <div className="col-span-full py-16 bg-slate-950/40 rounded-[2.5rem] border-2 border-dashed border-slate-800/50 flex flex-col items-center justify-center gap-4 text-slate-600">
-                    <Activity size={32} className="animate-spin duration-[3000ms]" />
-                    <p className="italic font-bold text-sm tracking-widest uppercase opacity-50 text-[10px]">Awaiting Data Nodes...</p>
+                  <div className="col-span-full py-20 bg-slate-950/20 rounded-[2.5rem] border-2 border-dashed border-slate-800/30 flex flex-col items-center justify-center gap-5 text-slate-700">
+                    <Activity size={40} className="animate-spin duration-[4000ms] opacity-20" />
+                    <p className="font-black text-xs tracking-[0.5em] uppercase opacity-30">Synchronizing Data Nodes...</p>
                   </div>
                 )}
               </div>
