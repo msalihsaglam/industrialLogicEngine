@@ -5,7 +5,7 @@ const pool = require("../config/db");
 // 1. Tüm Kuralları Listele
 router.get("/", async (req, res) => {
     try {
-        // * kullandığımız için is_complex ve logic_json otomatik gelir
+        // SELECT * kullandığımız için yeni 'enabled' sütunu da otomatik gelir
         const result = await pool.query("SELECT * FROM rules ORDER BY id DESC");
         res.json(result.rows);
     } catch (err) {
@@ -19,7 +19,8 @@ router.post("/", async (req, res) => {
         name, tag_id, logic_type, operator, 
         static_value, target_tag_id, offset_value, 
         severity, message,
-        is_complex, logic_json // YENİ: Bu alanları body'den alıyoruz
+        is_complex, logic_json,
+        enabled // <--- YENİ: Body'den alıyoruz
     } = req.body;
 
     try {
@@ -28,9 +29,10 @@ router.post("/", async (req, res) => {
                 name, tag_id, logic_type, operator, 
                 static_value, target_tag_id, offset_value, 
                 severity, message,
-                is_complex, logic_json
+                is_complex, logic_json,
+                enabled -- <--- YENİ: Sütun eklendi
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
             RETURNING *`;
 
         const values = [
@@ -43,8 +45,9 @@ router.post("/", async (req, res) => {
             offset_value || 0, 
             severity || 'warning', 
             message,
-            is_complex || false, // Varsayılan false
-            logic_json || null   // JSON objesi olarak gider
+            is_complex || false,
+            logic_json || null,
+            enabled !== undefined ? enabled : true // Eğer boş gelirse varsayılan true
         ];
 
         const result = await pool.query(query, values);
@@ -55,14 +58,15 @@ router.post("/", async (req, res) => {
     }
 });
 
-// 3. Kural Güncelleme (EDIT)
+// 3. Kural Güncelleme (EDIT & TOGGLE)
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { 
         name, tag_id, logic_type, operator, 
         static_value, target_tag_id, offset_value, 
         severity, message,
-        is_complex, logic_json // YENİ
+        is_complex, logic_json,
+        enabled // <--- YENİ: Toggle işlemi için bu kritik
     } = req.body;
 
     try {
@@ -78,8 +82,9 @@ router.put("/:id", async (req, res) => {
                 severity = $8, 
                 message = $9,
                 is_complex = $10,
-                logic_json = $11
-            WHERE id = $12 
+                logic_json = $11,
+                enabled = $12 -- <--- YENİ: Sütun güncelleniyor
+            WHERE id = $13 
             RETURNING *`;
 
         const values = [
@@ -94,7 +99,8 @@ router.put("/:id", async (req, res) => {
             message,
             is_complex || false,
             logic_json || null,
-            id
+            enabled, // 12. parametre
+            id       // 13. parametre (WHERE id)
         ];
 
         const result = await pool.query(query, values);
@@ -103,7 +109,7 @@ router.put("/:id", async (req, res) => {
             return res.status(404).json({ error: "Kural bulunamadı." });
         }
 
-        console.log(`📝 Kural güncellendi (ID: ${id})`);
+        console.log(`📝 Kural güncellendi veya Toggle edildi (ID: ${id}, Status: ${enabled})`);
         res.json(result.rows[0]);
     } catch (err) {
         console.error("❌ Kural güncelleme hatası:", err.message);

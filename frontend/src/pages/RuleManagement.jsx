@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, Save, Trash2, AlertTriangle, Zap, 
-  ArrowRightLeft, Edit3, XCircle, Layers, Plus, Target
+  ArrowRightLeft, Edit3, XCircle, Layers, Plus, Target, Power 
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -20,7 +20,8 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     offset_value: 0,
     severity: 'warning',
     message: '',
-    is_complex: false
+    is_complex: false,
+    enabled: true // Varsayılan aktif
   });
 
   const [complexLogic, setComplexLogic] = useState({
@@ -57,6 +58,18 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
   useEffect(() => {
     if (targetConnId) api.getTags(targetConnId).then(res => setTargetTags(res.data));
   }, [targetConnId]);
+
+  // --- AKTİF / PASİF YAPMA FONKSİYONU ---
+  const handleToggleEnable = async (rule) => {
+    try {
+      // Mevcut enabled durumunun tersini gönderiyoruz
+      await api.updateRule(rule.id, { ...rule, enabled: !rule.enabled });
+      onRefresh(); 
+    } catch (err) {
+      console.error("Kural durumu güncellenemedi:", err);
+      alert("Durum güncellenirken hata oluştu.");
+    }
+  };
 
   const updateComplexNode = (path, newNode) => {
     const updateRecursive = (node, currentPath) => {
@@ -120,7 +133,8 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
       offset_value: rule.offset_value || 0,
       severity: rule.severity || 'warning',
       message: rule.message || '',
-      is_complex: complexStatus
+      is_complex: complexStatus,
+      enabled: rule.enabled
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -132,7 +146,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     setNewRule({
       name: '', tag_id: '', logic_type: 'static', operator: '>',
       static_value: '', target_tag_id: '', offset_value: 0,
-      severity: 'warning', message: '', is_complex: false
+      severity: 'warning', message: '', is_complex: false, enabled: true
     });
   };
 
@@ -280,9 +294,8 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
 
             {!isComplex ? (
               <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                {/* ANA TETİKLEYİCİ */}
                 <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner">
-                  <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Ana Tetikleyici (Trigger Source)</label>
+                  <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Trigger Source</label>
                   <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none">
                     <option value="">Sistem Seçiniz...</option>
                     {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -293,7 +306,6 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                   </select>
                 </div>
 
-                {/* OPERATOR VE MOD SEÇİMİ */}
                 <div className="flex items-center gap-4">
                     <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400">
                        {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
@@ -304,7 +316,6 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                     </div>
                 </div>
 
-                {/* DİNAMİK ALAN: STATIC vs COMPARE */}
                 <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-inner min-h-[120px] flex flex-col justify-center">
                   {newRule.logic_type === 'static' ? (
                     <div className="animate-in fade-in duration-300">
@@ -367,40 +378,75 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
            </div>
            
            <div className="grid grid-cols-1 gap-5">
-             {rules.map((rule) => (
-               <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl shadow-amber-500/10' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
-                 <div className="flex items-center gap-8">
-                   <div className={`w-16 h-16 rounded-3xl border flex items-center justify-center shrink-0 ${getSevColor(rule.severity)} shadow-lg`}>
-                      {rule.is_complex ? <Layers size={32} /> : <Zap size={32} />}
-                   </div>
-                   <div>
-                     <div className="flex items-center gap-3 mb-2">
-                       <h4 className="text-lg font-black text-slate-100">{rule.name}</h4>
-                       {rule.is_complex && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full border border-purple-500/30 font-black tracking-widest uppercase">COMPLEX</span>}
-                       <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border shadow-sm ${getSevColor(rule.severity)}`}>{rule.severity}</span>
-                     </div>
-                     <div className="text-sm font-mono text-slate-500 mb-2">
-                       {rule.is_complex ? (
-                         <span className="italic text-purple-300/40 tracking-tight">"Hierarchical multi-tag decision tree logic"</span>
-                       ) : (
-                         <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
-                       )}
-                     </div>
-                     <p className="text-slate-500 text-sm italic font-medium leading-relaxed">"{rule.message}"</p>
-                   </div>
-                 </div>
-                 
-                 <div className="flex items-center gap-3 self-end lg:self-center">
-                   <button onClick={() => handleEditInit(rule)} className="p-4 bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-500 rounded-2xl transition-all shadow-md active:scale-90"><Edit3 size={20} /></button>
-                   <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-4 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-2xl transition-all shadow-md active:scale-90"><Trash2 size={20} /></button>
-                 </div>
-               </div>
-             ))}
+             {rules.map((rule) => {
+               // Durum kontrolü için değişken
+               const isEnabled = rule.enabled !== false; 
+
+               return (
+                <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 transition-all group relative overflow-hidden ${
+                  !isEnabled 
+                    ? 'bg-slate-950/50 border-slate-900 opacity-60 grayscale-[0.5]' 
+                    : editingId === rule.id 
+                      ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl' 
+                      : 'bg-slate-900 border-slate-800 shadow-xl'
+                }`}>
+                  <div className="flex items-center gap-8">
+                    <div className={`w-16 h-16 rounded-3xl border flex items-center justify-center shrink-0 shadow-lg transition-all ${
+                      isEnabled ? getSevColor(rule.severity) : 'bg-slate-800 border-slate-700 text-slate-600'
+                    }`}>
+                       {rule.is_complex ? <Layers size={32} /> : <Zap size={32} />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className={`text-lg font-black transition-colors ${isEnabled ? 'text-slate-100' : 'text-slate-500'}`}>{rule.name}</h4>
+                        {rule.is_complex && (
+                          <span className={`text-[9px] px-3 py-1 rounded-full border font-black tracking-widest uppercase ${
+                            isEnabled ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-slate-800 text-slate-600 border-slate-700'
+                          }`}>COMPLEX</span>
+                        )}
+                        <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border shadow-sm transition-all ${
+                          isEnabled ? getSevColor(rule.severity) : 'bg-slate-800 border-slate-700 text-slate-600'
+                        }`}>
+                          {isEnabled ? rule.severity : 'PASSIVE'}
+                        </span>
+                      </div>
+                      <div className={`text-sm font-mono mb-2 transition-colors ${isEnabled ? 'text-slate-500' : 'text-slate-700'}`}>
+                        {rule.is_complex ? (
+                          <span className="italic tracking-tight">"Hierarchical multi-tag decision tree logic"</span>
+                        ) : (
+                          <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
+                        )}
+                      </div>
+                      <p className={`text-sm italic font-medium leading-relaxed transition-colors ${isEnabled ? 'text-slate-500' : 'text-slate-800'}`}>"{rule.message}"</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 self-end lg:self-center z-10">
+                    {/* AKTİF / PASİF TOGGLE BUTONU */}
+                    <button 
+                      onClick={() => handleToggleEnable(rule)} 
+                      className={`p-4 rounded-2xl transition-all shadow-md active:scale-90 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest border ${
+                        isEnabled 
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20' 
+                        : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                      }`}
+                      title={isEnabled ? "Deactivate Rule" : "Activate Rule"}
+                    >
+                      <Power size={18} />
+                      <span className="hidden sm:inline">{isEnabled ? "Active" : "Passive"}</span>
+                    </button>
+
+                    <button onClick={() => handleEditInit(rule)} className="p-4 bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-500 rounded-2xl transition-all shadow-md active:scale-90"><Edit3 size={20} /></button>
+                    <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-4 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-2xl transition-all shadow-md active:scale-90"><Trash2 size={20} /></button>
+                  </div>
+                </div>
+               );
+             })}
            </div>
         </div>
       </div>
     </div>
-  );
+  );  
 };
 
 export default RuleManagement;

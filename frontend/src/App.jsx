@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Activity, Menu, LayoutDashboard, PlusCircle, Settings } from 'lucide-react';
+// Zap ikonunu buraya ekledik
+import { ChevronRight, Activity, Menu, LayoutDashboard, PlusCircle, Settings, Zap } from 'lucide-react'; 
 import { socket, api } from './services/api';
 import Dashboard from './pages/Dashboard';
 import RuleManagement from './pages/RuleManagement';
 import ConnectionPage from './pages/ConnectionPage';
+import Incidents from './pages/Incidents'; // 1. YENİ SAYFAYI IMPORT ET
 
 function App() {
   const [liveData, setLiveData] = useState({}); 
@@ -13,7 +15,6 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Sayfa verilerini tazeleyen ana fonksiyon
   const refreshAllData = () => {
     api.getRules().then(res => setRules(res.data)).catch(err => console.error(err));
     api.getConnections().then(res => setConnections(res.data)).catch(err => console.error(err));
@@ -22,7 +23,6 @@ function App() {
   useEffect(() => {
     refreshAllData();
 
-    // 1. Canlı Veri Dinleyicisi (Gruplandırılmış Format: "Sistem:Tag")
     socket.on('liveData', (data) => {
       setLiveData(prev => ({ 
         ...prev, 
@@ -30,12 +30,11 @@ function App() {
       }));
     });
 
-    // 2. Alarm Dinleyicisi
     socket.on('alarm', (newAlarm) => {
-      setAlarms(prev => [newAlarm, ...prev].slice(0, 5));
+      // 2. LİMİTİ ARTIRDIK: Artık son 50 alarmı hafızada tutuyoruz (Sayfa için)
+      setAlarms(prev => [newAlarm, ...prev].slice(0, 50));
     });
 
-    // 3. Bağlantı Durumu Dinleyicisi (Online/Offline takibi için kritik)
     socket.on('connectionStatusUpdate', (updatedConn) => {
       setConnections(prev => prev.map(conn => 
         conn.id === updatedConn.id ? { ...conn, status: updatedConn.status } : conn
@@ -49,8 +48,10 @@ function App() {
     };
   }, []);
 
+  // 3. MENÜYE INCIDENTS EKLEDİK
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: 'incidents', label: 'Incidents', icon: <Zap size={20} /> }, // Yeni sekme
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} /> },
     { id: 'connections', label: 'Connections', icon: <Settings size={20} /> },
   ];
@@ -65,9 +66,16 @@ function App() {
         </div>
         <nav className="flex-1 px-3 space-y-2 mt-4">
           {menuItems.map((item) => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all relative group ${activeTab === item.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-800'}`}>
               <div className="min-w-[20px]">{item.icon}</div>
               {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+              
+              {/* INCIDENTS İÇİN BİLDİRİM ROZETİ (Opsiyonel ama şık durur) */}
+              {item.id === 'incidents' && alarms.length > 0 && (
+                <span className="absolute right-2 bg-red-500 text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                  {alarms.length}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -83,24 +91,22 @@ function App() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
-          {/* DASHBOARD - connections prop'u buraya eklendi */}
+          {/* DASHBOARD - Alarms prop'u temizlendi, sadece streaming odaklı */}
           {activeTab === 'dashboard' && (
-            <Dashboard liveData={liveData} alarms={alarms} connections={connections} />
+            <Dashboard liveData={liveData} connections={connections} />
+          )}
+
+          {/* 4. INCIDENTS SAYFASI RENDER EDİLDİ */}
+          {activeTab === 'incidents' && (
+            <Incidents alarms={alarms} onClearAlarms={() => setAlarms([])} />
           )}
           
           {activeTab === 'rules' && (
-            <RuleManagement 
-              rules={rules} 
-              connections={connections} 
-              onRefresh={refreshAllData} 
-            />
+            <RuleManagement rules={rules} connections={connections} onRefresh={refreshAllData} />
           )}
           
           {activeTab === 'connections' && (
-            <ConnectionPage 
-              connections={connections} 
-              onRefresh={refreshAllData} 
-            />
+            <ConnectionPage connections={connections} onRefresh={refreshAllData} />
           )}
         </div>
       </main>
