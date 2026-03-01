@@ -47,26 +47,48 @@ async function checkRules(tagId, currentValue) {
 
         for (let rule of allRules) {
             let isTriggered = false;
+            let displayThreshold = rule.static_value; // Logda görünecek eşik değer
 
-            // --- Topic 3: Karmaşık Mantık mı yoksa Klasik mi? ---
+            // --- 1. DURUM: COMPLEX (KARMAŞIK) MANTIK ---
             if (rule.is_complex && rule.logic_json) {
-                // Sınırsız mantık ağacını recursive olarak çöz
                 isTriggered = evaluateNode(rule.logic_json, lastValues);
-            } else if (rule.tag_id == tagId) {
-                // Eski usul basit kural kontrolü (Geriye dönük uyumluluk)
-                const target = parseFloat(rule.static_value);
-                if (rule.operator === '>' && lastValues[tagId] > target) isTriggered = true;
-                if (rule.operator === '<' && lastValues[tagId] < target) isTriggered = true;
-                if (rule.operator === '==' && lastValues[tagId] == target) isTriggered = true;
+                displayThreshold = "DYNAMIC";
+            } 
+            
+            // --- 2. DURUM: BASİT MANTIK (Sadece kuralın ana tag'i güncellendiğinde çalışır) ---
+            else if (rule.tag_id == tagId) {
+                
+                // A) COMPARE (KIYASLAMA) MODU: Sensör vs Sensör
+                if (rule.logic_type === 'compare') {
+                    const targetVal = parseFloat(lastValues[rule.target_tag_id] || 0);
+                    const offset = parseFloat(rule.offset_value || 0);
+                    const totalThreshold = targetVal + offset;
+                    
+                    displayThreshold = `${targetVal} + ${offset} (${totalThreshold})`;
+                    
+                    // Kıyaslama denklemi
+                    isTriggered = evaluateOperator(parseFloat(currentValue), rule.operator, totalThreshold);
+                } 
+                
+                // B) STATIC (SABİT) MOD: Sensör vs Sayı
+                else {
+                    const target = parseFloat(rule.static_value);
+                    displayThreshold = target;
+                    isTriggered = evaluateOperator(parseFloat(currentValue), rule.operator, target);
+                }
             }
 
-            // Eğer kural tetiklendiyse alarmı patlat!
+            // --- ALARMI FIRLAT ---
             if (isTriggered) {
                 io.emit("alarm", {
                     ruleId: rule.id,
                     ruleName: rule.name,
                     message: rule.message,
                     severity: rule.severity,
+                    // Değerleri formatlıyoruz
+                    value: rule.is_complex ? "COMPLEX" : parseFloat(currentValue).toFixed(2), 
+                    threshold: displayThreshold,
+                    is_complex: rule.is_complex,
                     time: new Date().toLocaleTimeString('tr-TR')
                 });
             }
@@ -75,5 +97,20 @@ async function checkRules(tagId, currentValue) {
         console.error("Logic Engine Hatası:", err.message);
     }
 }
+
+// Yardımcı Fonksiyon: Operatörleri Çözümler
+function evaluateOperator(val1, op, val2) {
+    switch (op) {
+        case '>': return val1 > val2;
+        case '<': return val1 < val2;
+        case '==': return val1 == val2;
+        case '!=': return val1 != val2;
+        case '>=': return val1 >= val2;
+        case '<=': return val1 <= val2;
+        default: return false;
+    }
+}
+
+
 
 module.exports = { checkRules };

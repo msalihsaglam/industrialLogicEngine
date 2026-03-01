@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, Save, Trash2, AlertTriangle, Zap, 
-  ArrowRightLeft, Edit3, XCircle, Layers, Plus 
+  ArrowRightLeft, Edit3, XCircle, Layers, Plus, Target
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -145,7 +145,8 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
       tag_id: isComplex ? null : (newRule.tag_id || null),
       operator: isComplex ? null : newRule.operator,
       static_value: !isComplex && newRule.logic_type === 'static' ? newRule.static_value : null,
-      target_tag_id: !isComplex && newRule.logic_type === 'compare' ? newRule.target_tag_id : null
+      target_tag_id: !isComplex && newRule.logic_type === 'compare' ? newRule.target_tag_id : null,
+      offset_value: !isComplex && newRule.logic_type === 'compare' ? newRule.offset_value : 0
     };
 
     try {
@@ -229,7 +230,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     <div className="max-w-[1600px] mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-6">
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
         
-        {/* KURAL FORMU (GENİŞLETİLMİŞ: 2 SÜTUN) */}
+        {/* KURAL FORMU */}
         <div className={`xl:col-span-2 border rounded-[2.5rem] p-8 shadow-2xl h-fit sticky top-8 transition-all duration-500 ${editingId ? 'bg-slate-800/40 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
           <div className="flex justify-between items-center mb-8">
             <h3 className={`text-xl font-bold flex items-center gap-3 ${editingId ? 'text-amber-400' : 'text-blue-400'}`}>
@@ -238,54 +239,107 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
             </h3>
             <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                <button type="button" onClick={() => setIsComplex(false)} className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${!isComplex ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>SIMPLE</button>
-               <button type="button" onClick={() => setIsComplex(true)} className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${isComplex ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>TOPIC 3</button>
+               <button type="button" onClick={() => setIsComplex(true)} className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${isComplex ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>COMPLEX</button>
             </div>
           </div>
           
           <form onSubmit={handleSaveRule} className="space-y-6">
-            <div>
-              <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Rule Name</label>
-              <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all" placeholder="e.g. Critical Safety Group" />
+            <div className="grid grid-cols-1 gap-6">
+               <div>
+                <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Rule Name</label>
+                <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
+                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all" placeholder="e.g. Tank Pressure Check" />
+               </div>
+
+               <div>
+                <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest text-center">Severity Level</label>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'info', label: 'INFO', activeClass: 'bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.3)]' },
+                    { id: 'warning', label: 'WARNING', activeClass: 'bg-amber-600 text-white border-amber-400 shadow-[0_0_15px_rgba(217,119,6,0.3)]' },
+                    { id: 'critical', label: 'CRITICAL', activeClass: 'bg-red-600 text-white border-red-400 shadow-[0_0_15px_rgba(220,38,38,0.3)]' }
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setNewRule({ ...newRule, severity: s.id })}
+                      className={`flex-1 py-3 rounded-xl border-2 font-black text-[10px] transition-all duration-300 tracking-widest ${
+                        newRule.severity === s.id 
+                        ? s.activeClass 
+                        : 'bg-slate-800 border-transparent text-slate-600 opacity-50 hover:opacity-100 hover:bg-slate-750'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+               </div>
             </div>
 
             <hr className="border-slate-800" />
 
             {!isComplex ? (
-              <div className="space-y-5">
-                <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4">
-                  <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Trigger Source</label>
+              <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* ANA TETİKLEYİCİ */}
+                <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner">
+                  <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Ana Tetikleyici (Trigger Source)</label>
                   <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none">
-                    <option value="">Select System...</option>
+                    <option value="">Sistem Seçiniz...</option>
                     {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none disabled:opacity-20">
-                    <option value="">Select Tag...</option>
+                    <option value="">Sensör Seçiniz...</option>
                     {sourceTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
                   </select>
                 </div>
-                {/* Operator ve Değer */}
+
+                {/* OPERATOR VE MOD SEÇİMİ */}
                 <div className="flex items-center gap-4">
                     <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400">
                        {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
                     </select>
                     <div className="flex-1 flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
                         <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>STATIC</button>
-                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>COMPARE</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-orange-600 text-white' : 'text-slate-600'}`}>COMPARE</button>
                     </div>
                 </div>
-                <input type="number" step="0.1" value={newRule.static_value} onChange={e => setNewRule({...newRule, static_value: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-white outline-none" placeholder="Threshold Value..." />
+
+                {/* DİNAMİK ALAN: STATIC vs COMPARE */}
+                <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 shadow-inner min-h-[120px] flex flex-col justify-center">
+                  {newRule.logic_type === 'static' ? (
+                    <div className="animate-in fade-in duration-300">
+                      <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black">Sabit Eşik Değer (Threshold)</label>
+                      <input type="number" step="0.1" value={newRule.static_value} onChange={e => setNewRule({...newRule, static_value: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500" placeholder="Değer..." />
+                    </div>
+                  ) : (
+                    <div className="space-y-4 animate-in slide-in-from-right-2 duration-300">
+                      <label className="text-[10px] text-orange-500 block mb-2 uppercase font-black text-center italic">Kıyaslanacak Hedef (Target)</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <select value={targetConnId} onChange={(e) => setTargetConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+                          <option value="">Hedef Sistem...</option>
+                          {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <select value={newRule.target_tag_id} onChange={(e) => setNewRule({...newRule, target_tag_id: e.target.value})} disabled={!targetConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+                          <option value="">Hedef Tag...</option>
+                          {targetTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
+                        </select>
+                      </div>
+                      <div className="pt-2">
+                        <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold">Offset / Tolerans (+/-)</label>
+                        <input type="number" value={newRule.offset_value} onChange={e => setNewRule({...newRule, offset_value: e.target.value})}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none" placeholder="Fark değeri..." />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="bg-slate-950/80 p-6 rounded-[2.5rem] border border-purple-500/20 shadow-inner">
-                <label className="text-[10px] text-purple-400 block mb-4 uppercase font-black tracking-widest italic text-center">Recursive Logic Architecture</label>
-                {renderLogicNode(complexLogic)}
-                {complexLogic.children.length === 0 && (
-                  <button type="button" onClick={() => addComplexChild([], 'condition')} className="w-full py-8 border-2 border-dashed border-slate-800 rounded-[2rem] text-slate-600 text-xs font-bold hover:text-purple-400 hover:border-purple-500/40 transition-all">
-                    + BUILD FIRST LOGIC NODE
-                  </button>
-                )}
+              <div className="animate-in zoom-in-95 duration-500">
+                <div className="bg-slate-950/80 p-6 rounded-[2.5rem] border border-purple-500/20 shadow-inner">
+                  <label className="text-[10px] text-purple-400 block mb-4 uppercase font-black tracking-widest italic text-center">Recursive Logic Architecture</label>
+                  {renderLogicNode(complexLogic)}
+                </div>
               </div>
             )}
 
@@ -295,26 +349,26 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                 className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-300 outline-none h-20 resize-none focus:border-blue-500 transition-all" placeholder="Instructions for operator..." />
             </div>
 
-            <button type="submit" className={`w-full text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
+            <button type="submit" className={`w-full text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 hover:scale-[1.01] ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
               <Save size={20} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY LOGIC ENGINE'}
             </button>
           </form>
         </div>
 
-        {/* KURALLAR LİSTESİ (SAĞDA KALAN 3 SÜTUN) */}
+        {/* KURALLAR LİSTESİ */}
         <div className="xl:col-span-3 space-y-6">
            <div className="flex justify-between items-center px-6">
               <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] flex items-center gap-3">
                 <ArrowRightLeft size={18} className="text-blue-500" /> ACTIVE HEURISTICS
               </h3>
-              <div className="bg-slate-900 px-4 py-2 rounded-full border border-slate-800 text-[10px] font-black text-slate-400">
+              <div className="bg-slate-900 px-5 py-2 rounded-full border border-slate-800 text-[10px] font-black text-slate-400 shadow-lg">
                 {rules.length} RULES DEPLOYED
               </div>
            </div>
            
            <div className="grid grid-cols-1 gap-5">
              {rules.map((rule) => (
-               <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl shadow-amber-500/5' : 'bg-slate-900 border-slate-800 shadow-lg'}`}>
+               <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl shadow-amber-500/10' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
                  <div className="flex items-center gap-8">
                    <div className={`w-16 h-16 rounded-3xl border flex items-center justify-center shrink-0 ${getSevColor(rule.severity)} shadow-lg`}>
                       {rule.is_complex ? <Layers size={32} /> : <Zap size={32} />}
@@ -322,17 +376,17 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                    <div>
                      <div className="flex items-center gap-3 mb-2">
                        <h4 className="text-lg font-black text-slate-100">{rule.name}</h4>
-                       {rule.is_complex && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full border border-purple-500/30 font-black tracking-widest uppercase">TOPIC 3</span>}
-                       <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border ${getSevColor(rule.severity)}`}>{rule.severity}</span>
+                       {rule.is_complex && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full border border-purple-500/30 font-black tracking-widest uppercase">COMPLEX</span>}
+                       <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border shadow-sm ${getSevColor(rule.severity)}`}>{rule.severity}</span>
                      </div>
-                     <div className="text-sm font-mono text-slate-400 mb-2">
+                     <div className="text-sm font-mono text-slate-500 mb-2">
                        {rule.is_complex ? (
-                         <span className="italic text-purple-300/60">"Hierarchical multi-tag decision tree evaluation"</span>
+                         <span className="italic text-purple-300/40 tracking-tight">"Hierarchical multi-tag decision tree logic"</span>
                        ) : (
-                         <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id}`}</span>
+                         <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
                        )}
                      </div>
-                     <p className="text-slate-500 text-sm italic font-medium">"{rule.message}"</p>
+                     <p className="text-slate-500 text-sm italic font-medium leading-relaxed">"{rule.message}"</p>
                    </div>
                  </div>
                  
