@@ -1,29 +1,125 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Gauge, Thermometer, Activity, Cpu, 
-  CircleOff, Radio, ChevronRight 
+  Gauge as GaugeIcon, Thermometer, Activity, Cpu, Plus, 
+  Settings2, X, Layout, Save, Move, LineChart, Radio
 } from 'lucide-react';
 
 const Dashboard = ({ liveData = {}, connections = [] }) => {
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
-  const formatVal = (val) => {
-    if (val === undefined || val === null) return "0.00";
-    if (isNaN(val)) return val;
-    return Number(val).toFixed(2);
+  // 1. WIDGET LİSTESİ (Kalıcı Kayıt)
+  const [widgets, setWidgets] = useState(() => {
+    const saved = localStorage.getItem('user_widgets');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // 2. GEÇMİŞ VERİ (History) - Sparkline için son 30 değer
+  const [history, setHistory] = useState({});
+
+  useEffect(() => {
+    localStorage.setItem('user_widgets', JSON.stringify(widgets));
+  }, [widgets]);
+
+  // Canlı veri her değiştiğinde history state'ini güncelle
+  useEffect(() => {
+    setHistory(prev => {
+      const newHistory = { ...prev };
+      Object.keys(liveData).forEach(key => {
+        if (!newHistory[key]) newHistory[key] = [];
+        // Sadece son 30 veriyi tut
+        newHistory[key] = [...newHistory[key], parseFloat(liveData[key] || 0)].slice(-30);
+      });
+      return newHistory;
+    });
+  }, [liveData]);
+
+  const [newWidget, setNewWidget] = useState({
+    type: 'numeric',
+    tagKey: '',
+    title: ''
+  });
+
+  const addWidget = () => {
+    if (!newWidget.tagKey) return;
+    const id = Date.now().toString();
+    setWidgets([...widgets, { ...newWidget, id }]);
+    setIsAddModalOpen(false);
+    setNewWidget({ type: 'numeric', tagKey: '', title: '' });
   };
 
-  const getIcon = (tagName) => {
-    const name = tagName.toLowerCase();
-    if (name.includes('pres')) return <Gauge size={18} className="text-blue-400" />;
-    if (name.includes('temp')) return <Thermometer size={18} className="text-orange-400" />;
-    return <Activity size={18} className="text-emerald-400" />;
+  const removeWidget = (id) => {
+    setWidgets(widgets.filter(w => w.id !== id));
   };
 
-  const getColorClass = (tagName) => {
-    const name = tagName.toLowerCase();
-    if (name.includes('pres')) return "text-blue-400";
-    if (name.includes('temp')) return "text-orange-400";
-    return "text-emerald-400";
+  // --- WIDGET RENDER MOTORU ---
+  const renderWidgetContent = (w) => {
+    const currentVal = parseFloat(liveData[w.tagKey] || 0);
+    const dataPoints = history[w.tagKey] || [];
+
+    switch (w.type) {
+      case 'numeric':
+        return (
+          <div className="flex items-baseline gap-3 mt-2">
+            <span className="text-7xl font-black tracking-tighter text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.3)]">
+              {currentVal.toFixed(2)}
+            </span>
+            <span className="text-xs text-slate-700 font-black uppercase tracking-[0.2em] italic">Units</span>
+          </div>
+        );
+
+      case 'gauge':
+        // Basit SVG Gauge (0-100 arası ölçeklendirme)
+        const radius = 45;
+        const circumference = 2 * Math.PI * radius;
+        const percentage = Math.min(Math.max(currentVal, 0), 100);
+        const offset = circumference - (percentage / 100) * circumference;
+
+        return (
+          <div className="relative flex items-center justify-center h-40 mt-2">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800/50" />
+              <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" 
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                className="text-blue-500 transition-all duration-700 stroke-round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-black text-white">{currentVal.toFixed(1)}</span>
+              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-1">Percent %</span>
+            </div>
+          </div>
+        );
+
+      case 'sparkline':
+        // Mini Trend Grafiği (Normalizasyon dahil)
+        const max = Math.max(...dataPoints, 1) * 1.2;
+        const min = Math.min(...dataPoints, 0);
+        const range = max - min;
+        const points = dataPoints.map((val, i) => {
+          const x = (i / (30 - 1)) * 100;
+          const y = 50 - ((val - min) / range) * 40;
+          return `${x},${y}`;
+        }).join(' ');
+
+        return (
+          <div className="h-32 w-full mt-4 bg-slate-900/40 rounded-3xl border border-slate-800/50 p-4 relative overflow-hidden group-hover:bg-slate-900/60 transition-all">
+            <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+              <polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
+                className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                points={points} 
+              />
+            </svg>
+            <div className="absolute bottom-3 right-5 text-right">
+              <div className="text-xl font-black text-emerald-400 leading-none">{currentVal.toFixed(2)}</div>
+              <div className="text-[8px] text-slate-600 font-bold uppercase tracking-widest mt-1">Live Trend</div>
+            </div>
+          </div>
+        );
+
+      default: return null;
+    }
   };
 
   const activeConnections = connections.filter(c => c.enabled);
@@ -31,118 +127,149 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
   return (
     <div className="max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700 pb-20 px-4">
       
-      {/* STANDART SAYFA BAŞLIĞI */}
+      {/* 🏛️ HEADER */}
       <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Operations</h1>
           <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">
-            Real-time Telemetry & Live System Monitoring
+            Customizable Live Monitoring Workspace
           </p>
         </div>
+        
         <div className="flex gap-4">
-          <div className="bg-slate-900 border border-slate-800 px-5 py-2 rounded-2xl flex items-center gap-3 shadow-xl">
-             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-               {activeConnections.length} Active Nodes
-             </span>
-          </div>
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`px-6 py-3 rounded-2xl flex items-center gap-2 transition-all font-black text-[10px] uppercase tracking-widest border shadow-xl ${
+              isEditMode 
+              ? 'bg-amber-500 text-black border-amber-400 scale-105' 
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            {isEditMode ? <Save size={18} /> : <Settings2 size={18} />}
+            {isEditMode ? 'Finish Layout' : 'Customize Panel'}
+          </button>
+
+          {isEditMode && (
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all font-black text-[10px] uppercase tracking-widest animate-in zoom-in"
+            >
+              <Plus size={20} /> Add Widget
+            </button>
+          )}
         </div>
       </div>
 
-      {/* CANLI VERİ AKIŞI GRUPLARI */}
-      {activeConnections.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-32 bg-slate-900/40 border-2 border-dashed border-slate-800 rounded-[3rem]">
-          <div className="p-8 bg-slate-800/50 rounded-full mb-6 text-slate-700">
-            <CircleOff size={56} />
-          </div>
-          <h3 className="text-2xl font-black text-slate-400 tracking-tighter uppercase">System Offline</h3>
-          <p className="text-slate-600 text-sm mt-2 italic font-medium">Please activate your PLC connections in Connectivity Manager.</p>
+      {/* 🏗️ GRID */}
+      {widgets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-40 bg-slate-900/20 border-2 border-dashed border-slate-800 rounded-[3rem]">
+          <Layout size={64} className="text-slate-800 mb-6 opacity-20" />
+          <h3 className="text-xl font-black text-slate-600 tracking-tighter uppercase">No Dashboard Configured</h3>
+          <p className="text-slate-700 text-xs mt-2 italic">Switch to customize mode and deploy your first widget.</p>
         </div>
       ) : (
-        activeConnections.map((conn) => {
-          const connectionTags = Object.keys(liveData).filter(key => key.startsWith(`${conn.name}:`));
-
-          return (
-            <div key={conn.id} className="bg-slate-900/40 border border-slate-800/50 rounded-[3rem] p-8 shadow-inner transition-all hover:bg-slate-900/60 group">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {widgets.map((w) => (
+            <div key={w.id} className={`bg-slate-950/60 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl relative group transition-all hover:border-slate-600 overflow-hidden ${isEditMode ? 'ring-2 ring-amber-500/20' : ''}`}>
               
-              {/* Grup Başlığı ve Bağlantı Durumu */}
-              <div className="flex items-center justify-between mb-10 px-2">
-                <div className="flex items-center gap-5">
-                  <div className={`p-4 rounded-[1.5rem] transition-all shadow-xl ${
-                    conn.status 
-                    ? 'bg-blue-600 text-white shadow-blue-600/20' 
-                    : 'bg-slate-800 text-slate-500 border border-slate-700'
-                  }`}>
-                    <Cpu size={28} />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-slate-100 tracking-tight leading-none uppercase">{conn.name}</h2>
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className="text-[9px] text-slate-500 font-mono uppercase tracking-widest bg-slate-950 px-3 py-1 rounded-lg border border-slate-800/50 group-hover:border-slate-700 transition-colors">
-                        {conn.endpoint_url}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl border text-[10px] font-black tracking-[0.2em] transition-all shadow-lg ${
-                  conn.status 
-                    ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/20 shadow-emerald-500/5" 
-                    : "bg-red-500/5 text-red-500 border-red-500/20 shadow-red-500/5"
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${conn.status ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                  {conn.status ? "LIVE STREAMING" : "CONNECTION LOST"}
-                </div>
+              {isEditMode && (
+                <button 
+                  onClick={() => removeWidget(w.id)}
+                  className="absolute top-5 right-5 p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all z-20 shadow-lg"
+                >
+                  <X size={16} />
+                </button>
+              )}
+
+              {/* Arkaplan İkonu */}
+              <div className="absolute top-0 right-0 p-8 opacity-5 transform group-hover:rotate-12 transition-transform duration-700">
+                 {w.type === 'gauge' && <GaugeIcon size={60}/>}
+                 {w.type === 'numeric' && <Cpu size={60}/>}
+                 {w.type === 'sparkline' && <Activity size={60}/>}
               </div>
 
-              {/* Sensör Kartları Grid Düzeni */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {connectionTags.map((fullKey) => {
-                  const tagName = fullKey.split(':')[1];
-                  return (
-                    <div key={fullKey} className="bg-slate-950/60 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl group/card relative overflow-hidden transition-all hover:border-slate-600 hover:scale-[1.02]">
-                      
-                      {/* Kart Arkaplan İkonu */}
-                      <div className="absolute top-0 right-0 p-6 opacity-5 group-hover/card:opacity-10 transition-opacity transform group-hover/card:rotate-12 duration-500">
-                         {getIcon(tagName)}
-                      </div>
+              <h2 className="text-slate-500 text-[10px] mb-6 flex items-center gap-3 uppercase font-black tracking-[0.3em]">
+                {w.type === 'numeric' && <Cpu size={14} className="text-blue-500"/>}
+                {w.type === 'gauge' && <GaugeIcon size={14} className="text-amber-500"/>}
+                {w.type === 'sparkline' && <LineChart size={14} className="text-emerald-500"/>}
+                {w.title || w.tagKey.split(':')[1]}
+              </h2>
 
-                      <h2 className="text-slate-500 text-[10px] mb-8 flex items-center gap-3 uppercase font-black tracking-[0.3em]">
-                        <span className="p-1.5 bg-slate-900 rounded-lg">{getIcon(tagName)}</span> {tagName}
-                      </h2>
+              {/* WIDGET CONTENT */}
+              <div className="min-h-[120px] flex items-center">
+                {renderWidgetContent(w)}
+              </div>
 
-                      <div className={`text-7xl font-black tracking-tighter ${getColorClass(tagName)} flex items-baseline gap-3`}>
-                        {formatVal(liveData[fullKey])} 
-                        <span className="text-xs text-slate-700 font-black uppercase tracking-[0.2em] italic">Unit</span>
-                      </div>
-
-                      {/* Alt Bilgi Barı */}
-                      <div className="mt-10 pt-6 border-t border-slate-800/50 flex items-center justify-between">
-                         <div className="flex items-center gap-2.5">
-                            <Radio size={14} className={conn.status ? "text-emerald-500 animate-pulse" : "text-slate-800"} />
-                            <span className="text-[10px] text-slate-600 font-black uppercase tracking-tighter">
-                              {conn.status ? "Signal Stable" : "Link Interrupted"}
-                            </span>
-                         </div>
-                         <div className="text-[10px] text-slate-800 font-black font-mono tracking-widest">
-                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {/* Boş Durum: Veri Bekleniyor */}
-                {conn.status && connectionTags.length === 0 && (
-                  <div className="col-span-full py-20 bg-slate-950/20 rounded-[2.5rem] border-2 border-dashed border-slate-800/30 flex flex-col items-center justify-center gap-5 text-slate-700">
-                    <Activity size={40} className="animate-spin duration-[4000ms] opacity-20" />
-                    <p className="font-black text-xs tracking-[0.5em] uppercase opacity-30">Synchronizing Data Nodes...</p>
-                  </div>
-                )}
+              <div className="mt-8 pt-6 border-t border-slate-800/50 flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                    <Radio size={12} className="text-slate-700 animate-pulse" />
+                    <span className="text-[9px] font-mono text-slate-600 uppercase tracking-tighter">{w.tagKey.split(':')[0]}</span>
+                 </div>
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" />
               </div>
             </div>
-          );
-        })
+          ))}
+        </div>
+      )}
+
+      {/* ➕ MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[500] p-6 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-300">
+            <h3 className="text-3xl font-black text-white tracking-tighter uppercase mb-8">Deploy New Widget</h3>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-3 uppercase font-black tracking-widest ml-1">Friendly Title</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-bold"
+                  placeholder="e.g. Pressure Sensor #4"
+                  value={newWidget.title}
+                  onChange={e => setNewWidget({...newWidget, title: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 block mb-3 uppercase font-black tracking-widest ml-1">Data Stream Source</label>
+                <select 
+                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-mono text-xs"
+                  value={newWidget.tagKey}
+                  onChange={e => setNewWidget({...newWidget, tagKey: e.target.value})}
+                >
+                  <option value="">Select an active node...</option>
+                  {Object.keys(liveData).map(key => (
+                    <option key={key} value={key}>{key}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-4">
+                {[
+                  { id: 'numeric', icon: <Cpu size={24}/>, label: 'Value' },
+                  { id: 'gauge', icon: <GaugeIcon size={24}/>, label: 'Gauge' },
+                  { id: 'sparkline', icon: <LineChart size={24}/>, label: 'Trend' }
+                ].map(item => (
+                  <button 
+                    key={item.id}
+                    onClick={() => setNewWidget({...newWidget, type: item.id})}
+                    className={`p-6 rounded-3xl border-2 flex flex-col items-center gap-3 transition-all ${
+                      newWidget.type === item.id ? 'bg-blue-600/10 border-blue-500 text-blue-400' : 'bg-slate-800 border-transparent text-slate-600 hover:bg-slate-750'
+                    }`}
+                  >
+                    {item.icon}
+                    <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-4 pt-8">
+                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-700">Cancel</button>
+                <button onClick={addWidget} className="flex-[2] py-5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/40 hover:bg-blue-500 transition-all">Establish Widget</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
