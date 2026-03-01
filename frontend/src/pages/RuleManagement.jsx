@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Save, Trash2, Activity, AlertTriangle, Zap, ArrowRightLeft, Edit3, XCircle } from 'lucide-react';
+import { 
+  PlusCircle, Save, Trash2, AlertTriangle, Zap, 
+  ArrowRightLeft, Edit3, XCircle, Layers, Plus 
+} from 'lucide-react';
 import { api } from '../services/api';
 
 const RuleManagement = ({ rules, connections, onRefresh }) => {
-  // 1. State Yönetimi
-  const [editingId, setEditingId] = useState(null); // Düzenlenen kuralın ID'si
+  const [editingId, setEditingId] = useState(null);
+  const [isComplex, setIsComplex] = useState(false);
+  const [allTags, setAllTags] = useState([]); 
+  
   const [newRule, setNewRule] = useState({
     name: '',
     tag_id: '',
@@ -14,7 +19,14 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
     target_tag_id: '',
     offset_value: 0,
     severity: 'warning',
-    message: ''
+    message: '',
+    is_complex: false
+  });
+
+  const [complexLogic, setComplexLogic] = useState({
+    type: 'group',
+    operator: 'AND',
+    children: []
   });
 
   const [sourceConnId, setSourceConnId] = useState('');
@@ -22,78 +34,129 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
   const [sourceTags, setSourceTags] = useState([]);
   const [targetTags, setTargetTags] = useState([]);
 
-  // Tag Listelerini Yükleme
   useEffect(() => {
-    if (sourceConnId) {
-      api.getTags(sourceConnId).then(res => setSourceTags(res.data));
-    } else {
-      setSourceTags([]);
-    }
+    const fetchAllTags = async () => {
+      try {
+        const tagPromises = connections.map(conn => api.getTags(conn.id));
+        const results = await Promise.all(tagPromises);
+        const combined = results.flatMap((res, index) => 
+          res.data.map(t => ({ ...t, connName: connections[index].name }))
+        );
+        setAllTags(combined);
+      } catch (err) {
+        console.error("Tag listesi yüklenemedi:", err);
+      }
+    };
+    if (connections.length > 0) fetchAllTags();
+  }, [connections]);
+
+  useEffect(() => {
+    if (sourceConnId) api.getTags(sourceConnId).then(res => setSourceTags(res.data));
   }, [sourceConnId]);
 
   useEffect(() => {
-    if (targetConnId) {
-      api.getTags(targetConnId).then(res => setTargetTags(res.data));
-    } else {
-      setTargetTags([]);
-    }
+    if (targetConnId) api.getTags(targetConnId).then(res => setTargetTags(res.data));
   }, [targetConnId]);
 
-  // --- DÜZENLEME MODUNU BAŞLAT ---
+  const updateComplexNode = (path, newNode) => {
+    const updateRecursive = (node, currentPath) => {
+      if (currentPath.length === 0) return newNode;
+      const [idx, ...rest] = currentPath;
+      const newChildren = [...node.children];
+      newChildren[idx] = updateRecursive(newChildren[idx], rest);
+      return { ...node, children: newChildren };
+    };
+    setComplexLogic(updateRecursive(complexLogic, path));
+  };
+
+  const addComplexChild = (path, type) => {
+    const addRecursive = (node, currentPath) => {
+      if (currentPath.length === 0) {
+        const newItem = type === 'condition' 
+          ? { type: 'condition', tag_id: '', op: '>', val_type: 'static', val: '' }
+          : { type: 'group', operator: 'AND', children: [] };
+        return { ...node, children: [...node.children, newItem] };
+      }
+      const [idx, ...rest] = currentPath;
+      const newChildren = [...node.children];
+      newChildren[idx] = addRecursive(newChildren[idx], rest);
+      return { ...node, children: newChildren };
+    };
+    setComplexLogic(addRecursive(complexLogic, path));
+  };
+
+  const removeComplexChild = (path) => {
+    const removeRecursive = (node, currentPath) => {
+      if (currentPath.length === 1) {
+        const newChildren = node.children.filter((_, i) => i !== currentPath[0]);
+        return { ...node, children: newChildren };
+      }
+      const [idx, ...rest] = currentPath;
+      const newChildren = [...node.children];
+      newChildren[idx] = removeRecursive(newChildren[idx], rest);
+      return { ...node, children: newChildren };
+    };
+    if (path.length > 0) setComplexLogic(removeRecursive(complexLogic, path));
+  };
+
   const handleEditInit = (rule) => {
     setEditingId(rule.id);
+    const complexStatus = rule.is_complex === true || rule.is_complex === 't';
+    setIsComplex(complexStatus);
+
+    if (complexStatus && rule.logic_json) {
+      setComplexLogic(rule.logic_json);
+    } else {
+      setComplexLogic({ type: 'group', operator: 'AND', children: [] });
+    }
+
     setNewRule({
-      name: rule.name,
-      tag_id: rule.tag_id,
-      logic_type: rule.logic_type,
-      operator: rule.operator,
+      name: rule.name || '',
+      tag_id: rule.tag_id || '',
+      logic_type: rule.logic_type || 'static',
+      operator: rule.operator || '>',
       static_value: rule.static_value || '',
       target_tag_id: rule.target_tag_id || '',
       offset_value: rule.offset_value || 0,
-      severity: rule.severity,
-      message: rule.message
+      severity: rule.severity || 'warning',
+      message: rule.message || '',
+      is_complex: complexStatus
     });
-    // Not: sourceConnId ve targetConnId manuel seçilmelidir 
-    // veya kural nesnesinde connection_id bilgisi backend'den gelmelidir.
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setIsComplex(false);
+    setComplexLogic({ type: 'group', operator: 'AND', children: [] });
     setNewRule({
       name: '', tag_id: '', logic_type: 'static', operator: '>',
       static_value: '', target_tag_id: '', offset_value: 0,
-      severity: 'warning', message: ''
+      severity: 'warning', message: '', is_complex: false
     });
-    setSourceConnId('');
-    setTargetConnId('');
   };
 
-  // --- KAYDET / GÜNCELLE İŞLEMİ ---
-const handleSaveRule = async (e) => {
-  e.preventDefault();
-  
-  // Boş değerleri temizleyerek gönderiyoruz
-  const payload = {
-    ...newRule,
-    static_value: newRule.logic_type === 'static' ? newRule.static_value : null,
-    target_tag_id: newRule.logic_type === 'compare' ? newRule.target_tag_id : null,
-  };
+  const handleSaveRule = async (e) => {
+    e.preventDefault();
+    const payload = {
+      ...newRule,
+      is_complex: isComplex,
+      logic_json: isComplex ? complexLogic : null,
+      tag_id: isComplex ? null : (newRule.tag_id || null),
+      operator: isComplex ? null : newRule.operator,
+      static_value: !isComplex && newRule.logic_type === 'static' ? newRule.static_value : null,
+      target_tag_id: !isComplex && newRule.logic_type === 'compare' ? newRule.target_tag_id : null
+    };
 
-  try {
-    if (editingId) {
-      await api.updateRule(editingId, payload); // payload kullanıyoruz
-    } else {
-      await api.addRule(payload);
+    try {
+      if (editingId) await api.updateRule(editingId, payload);
+      else await api.addRule(payload);
+      handleCancelEdit();
+      onRefresh();
+    } catch (err) {
+      alert("İşlem başarısız oldu.");
     }
-    
-    handleCancelEdit();
-    onRefresh();
-  } catch (err) {
-    console.error("Hata Detayı:", err.response?.data || err.message); // Konsola detayı yazdır
-    alert("İşlem başarısız. Konsolu (F12) kontrol edin.");
-  }
-};
+  };
 
   const getSevColor = (sev) => {
     if (sev === 'critical') return 'text-red-500 bg-red-500/10 border-red-500/20';
@@ -101,169 +164,184 @@ const handleSaveRule = async (e) => {
     return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
   };
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        
-        {/* KURAL FORMU */}
-        <div className={`xl:col-span-1 border rounded-[2rem] p-6 shadow-2xl h-fit sticky top-8 transition-colors duration-500 ${editingId ? 'bg-slate-800/40 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className={`text-lg font-bold flex items-center gap-2 ${editingId ? 'text-amber-400' : 'text-blue-400'}`}>
-              {editingId ? <Edit3 size={20} /> : <Zap size={20} />}
-              {editingId ? 'Edit Logic Rule' : 'Logic Builder'}
-            </h3>
-            {editingId && (
-              <button onClick={handleCancelEdit} className="text-slate-500 hover:text-white transition-colors">
-                <XCircle size={20} />
-              </button>
+  const renderLogicNode = (node, path = []) => {
+    if (node.type === 'group') {
+      return (
+        <div key={path.join('-')} className="ml-2 pl-6 border-l-2 border-slate-700/50 space-y-4 my-4 relative">
+          <div className="absolute left-0 top-0 w-3 h-[2px] bg-slate-700/50"></div>
+          <div className="flex items-center gap-3 bg-slate-800/40 p-2 rounded-lg w-fit">
+            <select 
+              value={node.operator}
+              onChange={(e) => updateComplexNode(path, { ...node, operator: e.target.value })}
+              className="bg-slate-900 text-blue-400 text-xs font-black p-1.5 rounded border border-slate-700 outline-none focus:border-blue-500 transition-all"
+            >
+              <option value="AND">AND</option>
+              <option value="OR">OR</option>
+            </select>
+            <button type="button" onClick={() => addComplexChild(path, 'condition')} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded-md transition-colors"><PlusCircle size={18}/></button>
+            <button type="button" onClick={() => addComplexChild(path, 'group')} className="p-1 text-purple-500 hover:bg-purple-500/10 rounded-md transition-colors"><Layers size={18}/></button>
+            {path.length > 0 && (
+              <button type="button" onClick={() => removeComplexChild(path)} className="p-1 text-red-500/50 hover:text-red-500 rounded-md"><Trash2 size={16}/></button>
             )}
           </div>
-          
-          <form onSubmit={handleSaveRule} className="space-y-4">
-            <div>
-              <label className="text-[10px] text-slate-500 block mb-1 uppercase font-black tracking-widest">Rule Name</label>
-              <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500" placeholder="e.g. Pump Delta Check" />
-            </div>
-
-            <div>
-              <label className="text-[10px] text-slate-500 block mb-1 uppercase font-black tracking-widest">Severity</label>
-              <div className="flex gap-2">
-                {['info', 'warning', 'critical'].map(s => (
-                  <button key={s} type="button" onClick={() => setNewRule({...newRule, severity: s})}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${newRule.severity === s ? getSevColor(s) : 'bg-slate-800 border-transparent text-slate-500'}`}>
-                    {s}
-                  </button>
+          <div className="space-y-3">
+            {node.children.map((child, idx) => renderLogicNode(child, [...path, idx]))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div key={path.join('-')} className="flex items-center gap-4 bg-slate-900/80 p-3 rounded-2xl border border-slate-800 shadow-lg hover:border-slate-600 transition-all group">
+        <select 
+          value={node.tag_id}
+          onChange={(e) => updateComplexNode(path, { ...node, tag_id: e.target.value })}
+          className="bg-slate-800 text-slate-200 text-sm outline-none flex-1 p-2 rounded-xl border border-slate-700 focus:border-blue-500 transition-all"
+        >
+          <option value="">Select Sensor...</option>
+          {connections.map(conn => (
+             <optgroup key={conn.id} label={conn.name} className="bg-slate-950 text-slate-500">
+                {allTags.filter(t => t.connection_id === conn.id).map(t => (
+                  <option key={t.id} value={t.id} className="text-slate-200">{t.tag_name}</option>
                 ))}
-              </div>
+             </optgroup>
+          ))}
+        </select>
+        <select 
+          value={node.op} 
+          onChange={(e) => updateComplexNode(path, { ...node, op: e.target.value })}
+          className="bg-transparent text-blue-400 font-black text-sm outline-none w-12"
+        >
+          {['>', '<', '==', '!=', '>=', '<='].map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <input 
+          type="number" 
+          value={node.val} 
+          onChange={(e) => updateComplexNode(path, { ...node, val: e.target.value })}
+          className="bg-slate-800 border border-slate-700 rounded-xl p-2 text-sm w-24 outline-none text-white focus:border-emerald-500 transition-all"
+          placeholder="Value"
+        />
+        <button type="button" onClick={() => removeComplexChild(path)} className="text-slate-600 hover:text-red-500 p-1 transition-colors"><Trash2 size={18}/></button>
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-[1600px] mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-6">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
+        
+        {/* KURAL FORMU (GENİŞLETİLMİŞ: 2 SÜTUN) */}
+        <div className={`xl:col-span-2 border rounded-[2.5rem] p-8 shadow-2xl h-fit sticky top-8 transition-all duration-500 ${editingId ? 'bg-slate-800/40 border-amber-500/30' : 'bg-slate-900 border-slate-800'}`}>
+          <div className="flex justify-between items-center mb-8">
+            <h3 className={`text-xl font-bold flex items-center gap-3 ${editingId ? 'text-amber-400' : 'text-blue-400'}`}>
+              {editingId ? <Edit3 size={24} /> : <Zap size={24} />}
+              {editingId ? 'Edit Logic Rule' : 'Logic Builder Engine'}
+            </h3>
+            <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+               <button type="button" onClick={() => setIsComplex(false)} className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${!isComplex ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>SIMPLE</button>
+               <button type="button" onClick={() => setIsComplex(true)} className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${isComplex ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>TOPIC 3</button>
+            </div>
+          </div>
+          
+          <form onSubmit={handleSaveRule} className="space-y-6">
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Rule Name</label>
+              <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
+                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all" placeholder="e.g. Critical Safety Group" />
             </div>
 
-            <hr className="border-slate-800 my-4" />
+            <hr className="border-slate-800" />
 
-            {/* TETİKLEYİCİ */}
-            <div className="space-y-3">
-              <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic">Trigger Source {editingId && '(Re-select if needed)'}</label>
-              <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none focus:border-blue-500">
-                <option value="">Select System...</option>
-                {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs outline-none disabled:opacity-20 focus:border-blue-500">
-                <option value="">Select Tag...</option>
-                {sourceTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
-              </select>
-            </div>
-
-            {/* OPERATOR */}
-            <div className="flex items-center gap-4 py-2">
-                <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm font-bold text-blue-400">
-                   {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
-                </select>
-                <div className="flex-1 flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-                    <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>STATIC</button>
-                    <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${newRule.logic_type === 'compare' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>COMPARE</button>
-                </div>
-            </div>
-
-            {/* DİNAMİK HEDEF ALANI */}
-            <div className="bg-slate-950/50 p-4 rounded-2xl border border-dashed border-slate-800">
-              {newRule.logic_type === 'static' ? (
-                <div>
-                  <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold">Static Threshold</label>
-                  <input type="number" step="0.1" value={newRule.static_value} onChange={e => setNewRule({...newRule, static_value: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm outline-none" placeholder="Enter value..." />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold">Target Comparison</label>
-                  <select value={targetConnId} onChange={(e) => setTargetConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs outline-none">
-                    <option value="">Target System...</option>
+            {!isComplex ? (
+              <div className="space-y-5">
+                <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4">
+                  <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Trigger Source</label>
+                  <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none">
+                    <option value="">Select System...</option>
                     {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <select value={newRule.target_tag_id} onChange={(e) => setNewRule({...newRule, target_tag_id: e.target.value})} disabled={!targetConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs outline-none">
-                    <option value="">Target Tag...</option>
-                    {targetTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
+                  <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none disabled:opacity-20">
+                    <option value="">Select Tag...</option>
+                    {sourceTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
                   </select>
-                  <div className="pt-2">
-                    <label className="text-[9px] text-slate-600 block mb-1 font-bold">OFFSET (+/-)</label>
-                    <input type="number" value={newRule.offset_value} onChange={e => setNewRule({...newRule, offset_value: e.target.value})}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs outline-none" placeholder="0" />
-                  </div>
                 </div>
-              )}
-            </div>
+                {/* Operator ve Değer */}
+                <div className="flex items-center gap-4">
+                    <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400">
+                       {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
+                    </select>
+                    <div className="flex-1 flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>STATIC</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-slate-800 text-white' : 'text-slate-600'}`}>COMPARE</button>
+                    </div>
+                </div>
+                <input type="number" step="0.1" value={newRule.static_value} onChange={e => setNewRule({...newRule, static_value: e.target.value})}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-white outline-none" placeholder="Threshold Value..." />
+              </div>
+            ) : (
+              <div className="bg-slate-950/80 p-6 rounded-[2.5rem] border border-purple-500/20 shadow-inner">
+                <label className="text-[10px] text-purple-400 block mb-4 uppercase font-black tracking-widest italic text-center">Recursive Logic Architecture</label>
+                {renderLogicNode(complexLogic)}
+                {complexLogic.children.length === 0 && (
+                  <button type="button" onClick={() => addComplexChild([], 'condition')} className="w-full py-8 border-2 border-dashed border-slate-800 rounded-[2rem] text-slate-600 text-xs font-bold hover:text-purple-400 hover:border-purple-500/40 transition-all">
+                    + BUILD FIRST LOGIC NODE
+                  </button>
+                )}
+              </div>
+            )}
 
             <div>
-              <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold tracking-widest">Alert Message</label>
+              <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Alert Message</label>
               <textarea value={newRule.message} onChange={(e) => setNewRule({...newRule, message: e.target.value})} 
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs outline-none h-20 resize-none focus:border-blue-500" placeholder="Alarm details..." />
+                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-300 outline-none h-20 resize-none focus:border-blue-500 transition-all" placeholder="Instructions for operator..." />
             </div>
 
-            <button type="submit" className={`w-full text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${editingId ? 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-500' : 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-400'}`}>
-              <Save size={18} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY LOGIC'}
+            <button type="submit" className={`w-full text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
+              <Save size={20} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY LOGIC ENGINE'}
             </button>
           </form>
         </div>
 
-        {/* KURALLAR LİSTESİ */}
-        <div className="xl:col-span-3 space-y-4">
-           <div className="flex justify-between items-center px-4">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                <ArrowRightLeft size={16}/> Active Heuristics
+        {/* KURALLAR LİSTESİ (SAĞDA KALAN 3 SÜTUN) */}
+        <div className="xl:col-span-3 space-y-6">
+           <div className="flex justify-between items-center px-6">
+              <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] flex items-center gap-3">
+                <ArrowRightLeft size={18} className="text-blue-500" /> ACTIVE HEURISTICS
               </h3>
-              <span className="text-[10px] font-mono text-slate-600 bg-slate-900 px-3 py-1 rounded-full">{rules.length} Rules Active</span>
+              <div className="bg-slate-900 px-4 py-2 rounded-full border border-slate-800 text-[10px] font-black text-slate-400">
+                {rules.length} RULES DEPLOYED
+              </div>
            </div>
-
-           <div className="grid grid-cols-1 gap-4">
-              {rules.length === 0 ? (
-                <div className="py-20 text-center bg-slate-900/20 border border-dashed border-slate-800 rounded-[2rem]">
-                  <p className="text-slate-600 italic">No custom logic deployed for the current shift.</p>
-                </div>
-              ) : rules.map((rule) => (
-                <div key={rule.id} className={`p-6 rounded-[2rem] border flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-xl shadow-amber-500/5' : 'bg-slate-900 border-slate-800'}`}>
-                  <div className="flex items-center gap-6">
-                    <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${getSevColor(rule.severity)}`}>
-                       <AlertTriangle size={24} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-slate-100">{rule.name}</h4>
-                        <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase border ${getSevColor(rule.severity)}`}>
-                          {rule.severity}
-                        </span>
-                      </div>
-                      <div className="text-xs font-mono">
-                        <span className="text-blue-400">IF</span> [Tag:{rule.tag_id}] 
-                        <span className="text-white mx-2">{rule.operator}</span> 
-                        {rule.logic_type === 'static' ? (
-                          <span className="text-emerald-400">{rule.static_value}</span>
-                        ) : (
-                          <span className="text-orange-400">TargetTag:{rule.target_tag_id} {Number(rule.offset_value) !== 0 && `+ ${rule.offset_value}`}</span>
-                        )}
-                      </div>
-                      <p className="text-slate-500 text-xs mt-2 italic">"{rule.message}"</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 self-end md:self-center">
-                    {/* DÜZENLE BUTONU */}
-                    <button 
-                      onClick={() => handleEditInit(rule)} 
-                      className="p-3 bg-slate-800 hover:bg-amber-500/10 text-slate-500 hover:text-amber-500 rounded-xl transition-all"
-                      title="Edit Rule"
-                    >
-                      <Edit3 size={18} />
-                    </button>
-                    {/* SİL BUTONU */}
-                    <button 
-                      onClick={() => api.deleteRule(rule.id).then(onRefresh)} 
-                      className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-500 hover:text-red-500 rounded-xl transition-all"
-                      title="Delete Rule"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+           
+           <div className="grid grid-cols-1 gap-5">
+             {rules.map((rule) => (
+               <div key={rule.id} className={`p-8 rounded-[2.5rem] border flex flex-col lg:flex-row lg:items-center justify-between gap-8 hover:border-slate-600 transition-all group ${editingId === rule.id ? 'bg-amber-500/5 border-amber-500/40 shadow-2xl shadow-amber-500/5' : 'bg-slate-900 border-slate-800 shadow-lg'}`}>
+                 <div className="flex items-center gap-8">
+                   <div className={`w-16 h-16 rounded-3xl border flex items-center justify-center shrink-0 ${getSevColor(rule.severity)} shadow-lg`}>
+                      {rule.is_complex ? <Layers size={32} /> : <Zap size={32} />}
+                   </div>
+                   <div>
+                     <div className="flex items-center gap-3 mb-2">
+                       <h4 className="text-lg font-black text-slate-100">{rule.name}</h4>
+                       {rule.is_complex && <span className="text-[9px] bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full border border-purple-500/30 font-black tracking-widest uppercase">TOPIC 3</span>}
+                       <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border ${getSevColor(rule.severity)}`}>{rule.severity}</span>
+                     </div>
+                     <div className="text-sm font-mono text-slate-400 mb-2">
+                       {rule.is_complex ? (
+                         <span className="italic text-purple-300/60">"Hierarchical multi-tag decision tree evaluation"</span>
+                       ) : (
+                         <span>IF [Tag:{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id}`}</span>
+                       )}
+                     </div>
+                     <p className="text-slate-500 text-sm italic font-medium">"{rule.message}"</p>
+                   </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-3 self-end lg:self-center">
+                   <button onClick={() => handleEditInit(rule)} className="p-4 bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-500 rounded-2xl transition-all shadow-md active:scale-90"><Edit3 size={20} /></button>
+                   <button onClick={() => api.deleteRule(rule.id).then(onRefresh)} className="p-4 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-2xl transition-all shadow-md active:scale-90"><Trash2 size={20} /></button>
+                 </div>
+               </div>
+             ))}
            </div>
         </div>
       </div>

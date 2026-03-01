@@ -1,77 +1,78 @@
 const pool = require("../config/db");
 const socketManager = require("../socket/socketManager");
 
+// Bellekteki son tag değerlerini tutar (Hızlı erişim için)
+const lastValues = {}; 
+
 /**
- * Bellekteki son tag değerleri (Kıyaslamalı kurallar için gerekli)
- * { "1": 45.2, "2": 38.5 } -> ID: Değer formatında tutulur
+ * REKÜRSİF MANTIK ÇÖZÜCÜ (Topic 3'ün Kalbi)
+ * Bu fonksiyon, JSON ağacını en derin dallarından başlayarak yukarı doğru çözer.
  */
-const lastValues = {};
+function evaluateNode(node, values) {
+    if (node.type === 'group') {
+        // Eğer bu bir grupsa (AND/OR), içindeki çocukları kontrol et
+        if (node.operator === 'AND') {
+            return node.children.every(child => evaluateNode(child, values));
+        } else if (node.operator === 'OR') {
+            return node.children.some(child => evaluateNode(child, values));
+        }
+    } else if (node.type === 'condition') {
+        // Eğer bu bir kural ise (Basınç > 50 gibi), kıyasla
+        const currentVal = Number(values[node.tag_id] || 0);
+        const targetVal = node.val_type === 'static' 
+            ? Number(node.val) 
+            : Number(values[node.target_tag_id] || 0) + Number(node.offset || 0);
+
+        switch (node.op) {
+            case '>':  return currentVal >  targetVal;
+            case '<':  return currentVal <  targetVal;
+            case '==': return currentVal == targetVal;
+            case '!=': return currentVal != targetVal;
+            case '>=': return currentVal >= targetVal;
+            case '<=': return currentVal <= targetVal;
+            default:   return false;
+        }
+    }
+    return false;
+}
 
 async function checkRules(tagId, currentValue) {
     const io = socketManager.getIo();
-    const currentVal = parseFloat(currentValue);
-    
-    // 1. Gelen değeri hafızaya kaydet/güncelle
-    lastValues[tagId] = currentVal;
+    lastValues[tagId] = parseFloat(currentValue);
 
     try {
-        // 2. Bu tag ile ilgili tüm AKTİF kuralları yeni tablo yapısına göre çek
-        const res = await pool.query(
-            "SELECT * FROM rules WHERE tag_id = $1 AND enabled = true", 
-            [tagId]
-        );
+        // Tüm aktif kuralları çek
+        const res = await pool.query("SELECT * FROM rules WHERE enabled = true");
+        const allRules = res.rows;
 
-        const activeRules = res.rows;
-
-        for (let rule of activeRules) {
+        for (let rule of allRules) {
             let isTriggered = false;
-            let targetThreshold = 0;
 
-            // --- HEDEF DEĞER BELİRLEME (STATİK VEYA KIYASLAMALI) ---
-            if (rule.logic_type === 'static') {
-                // Klasik: Değer vs Sabit Eşik (Örn: Pressure > 80)
-                targetThreshold = parseFloat(rule.static_value);
-            } 
-            else if (rule.logic_type === 'compare') {
-                // Yeni Nesil: Değer vs Başka Bir Tag + Offset (Örn: In_Temp > Out_Temp + 5)
-                const otherTagValue = lastValues[rule.target_tag_id] || 0;
-                targetThreshold = parseFloat(otherTagValue) + parseFloat(rule.offset_value || 0);
+            // --- Topic 3: Karmaşık Mantık mı yoksa Klasik mi? ---
+            if (rule.is_complex && rule.logic_json) {
+                // Sınırsız mantık ağacını recursive olarak çöz
+                isTriggered = evaluateNode(rule.logic_json, lastValues);
+            } else if (rule.tag_id == tagId) {
+                // Eski usul basit kural kontrolü (Geriye dönük uyumluluk)
+                const target = parseFloat(rule.static_value);
+                if (rule.operator === '>' && lastValues[tagId] > target) isTriggered = true;
+                if (rule.operator === '<' && lastValues[tagId] < target) isTriggered = true;
+                if (rule.operator === '==' && lastValues[tagId] == target) isTriggered = true;
             }
 
-            // --- OPERATÖR KONTROLÜ ---
-            switch (rule.operator) {
-                case ">":  if (currentVal > targetThreshold)  isTriggered = true; break;
-                case "<":  if (currentVal < targetThreshold)  isTriggered = true; break;
-                case "==": if (currentVal == targetThreshold) isTriggered = true; break;
-                case "!=": if (currentVal != targetThreshold) isTriggered = true; break;
-                case ">=": if (currentVal >= targetThreshold) isTriggered = true; break;
-                case "<=": if (currentVal <= targetThreshold) isTriggered = true; break;
-            }
-
-            // 3. EĞER KURAL İHLAL EDİLDİYSE ALARM ÜRET
+            // Eğer kural tetiklendiyse alarmı patlat!
             if (isTriggered) {
-                const alarmPayload = {
-                    id: Date.now() + Math.random(), // Unique ID
+                io.emit("alarm", {
                     ruleId: rule.id,
                     ruleName: rule.name,
-                    tagId: tagId,
-                    message: rule.message || `${rule.name} ihlal edildi!`,
-                    value: currentVal.toFixed(2),
-                    threshold: targetThreshold.toFixed(2),
-                    severity: rule.severity, // DB'den gelen 'critical', 'warning', 'info'
-                    time: new Date().toLocaleTimeString('tr-TR'),
-                    logicType: rule.logic_type
-                };
-
-                // Frontend'e alarmı fırlat
-                io.emit("alarm", alarmPayload);
-                
-                // Geliştirici konsoluna log bas
-                console.log(`🚨 [${rule.severity.toUpperCase()}] ${rule.name} TETİKLENDİ: ${currentVal} ${rule.operator} ${targetThreshold.toFixed(2)}`);
+                    message: rule.message,
+                    severity: rule.severity,
+                    time: new Date().toLocaleTimeString('tr-TR')
+                });
             }
         }
     } catch (err) {
-        console.error("Logic Engine Kritik Hatası:", err.message);
+        console.error("Logic Engine Hatası:", err.message);
     }
 }
 

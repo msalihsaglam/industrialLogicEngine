@@ -5,6 +5,7 @@ const pool = require("../config/db");
 // 1. Tüm Kuralları Listele
 router.get("/", async (req, res) => {
     try {
+        // * kullandığımız için is_complex ve logic_json otomatik gelir
         const result = await pool.query("SELECT * FROM rules ORDER BY id DESC");
         res.json(result.rows);
     } catch (err) {
@@ -17,7 +18,8 @@ router.post("/", async (req, res) => {
     const { 
         name, tag_id, logic_type, operator, 
         static_value, target_tag_id, offset_value, 
-        severity, message 
+        severity, message,
+        is_complex, logic_json // YENİ: Bu alanları body'den alıyoruz
     } = req.body;
 
     try {
@@ -25,37 +27,42 @@ router.post("/", async (req, res) => {
             INSERT INTO rules (
                 name, tag_id, logic_type, operator, 
                 static_value, target_tag_id, offset_value, 
-                severity, message
+                severity, message,
+                is_complex, logic_json
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
             RETURNING *`;
 
         const values = [
             name, 
             tag_id || null, 
             logic_type || 'static', 
-            operator, 
+            operator || null, 
             static_value === "" ? null : static_value, 
             target_tag_id === "" ? null : target_tag_id, 
             offset_value || 0, 
             severity || 'warning', 
-            message
+            message,
+            is_complex || false, // Varsayılan false
+            logic_json || null   // JSON objesi olarak gider
         ];
 
         const result = await pool.query(query, values);
         res.json(result.rows[0]);
     } catch (err) {
+        console.error("❌ Kural ekleme hatası:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 3. Kural Güncelleme (EDIT) - YENİ EKLENDİ
+// 3. Kural Güncelleme (EDIT)
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { 
         name, tag_id, logic_type, operator, 
         static_value, target_tag_id, offset_value, 
-        severity, message 
+        severity, message,
+        is_complex, logic_json // YENİ
     } = req.body;
 
     try {
@@ -69,20 +76,24 @@ router.put("/:id", async (req, res) => {
                 target_tag_id = $6, 
                 offset_value = $7, 
                 severity = $8, 
-                message = $9
-            WHERE id = $10 
+                message = $9,
+                is_complex = $10,
+                logic_json = $11
+            WHERE id = $12 
             RETURNING *`;
 
         const values = [
             name, 
             tag_id || null, 
             logic_type, 
-            operator, 
+            operator || null, 
             static_value === "" ? null : static_value, 
             target_tag_id === "" ? null : target_tag_id, 
             offset_value || 0, 
             severity, 
             message,
+            is_complex || false,
+            logic_json || null,
             id
         ];
 
@@ -92,7 +103,7 @@ router.put("/:id", async (req, res) => {
             return res.status(404).json({ error: "Kural bulunamadı." });
         }
 
-        console.log(`📝 Kural güncellendi: ${name}`);
+        console.log(`📝 Kural güncellendi (ID: ${id})`);
         res.json(result.rows[0]);
     } catch (err) {
         console.error("❌ Kural güncelleme hatası:", err.message);
