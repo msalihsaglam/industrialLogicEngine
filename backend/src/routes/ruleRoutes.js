@@ -2,27 +2,44 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
 
-// 1. Tüm Kuralları Listele
+// 1. Kullanıcıya Özel Kuralları Listele
+// Örn: GET /api/rules?userId=1
 router.get("/", async (req, res) => {
+    const { userId } = req.query; // Query string'den userId bekliyoruz
+    
     try {
-        // SELECT * kullandığımız için yeni 'enabled' sütunu da otomatik gelir
-        const result = await pool.query("SELECT * FROM rules ORDER BY id DESC");
+        let query = "SELECT * FROM rules";
+        let values = [];
+
+        if (userId) {
+            query += " WHERE user_id = $1";
+            values.push(userId);
+        }
+
+        query += " ORDER BY id DESC";
+        
+        const result = await pool.query(query, values);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. Yeni Kural Ekleme
+// 2. Yeni Kural Ekleme (Kullanıcı İlişkili)
 router.post("/", async (req, res) => {
     const { 
         name, tag_id, logic_type, operator, 
         static_value, target_tag_id, offset_value, 
         severity, message,
         is_complex, logic_json,
-        enabled // <--- YENİ: Body'den alıyoruz
+        enabled,
+        user_id // <--- YENİ: Kuralın sahibi kim?
     } = req.body;
 
+    console.log(`📥 Kural ekleme isteği: User ID = ${user_id}`);
+if (!user_id) {
+        return res.status(400).json({ error: "Kural eklemek için kullanıcı ID'si zorunludur!" });
+    }
     try {
         const query = `
             INSERT INTO rules (
@@ -30,9 +47,10 @@ router.post("/", async (req, res) => {
                 static_value, target_tag_id, offset_value, 
                 severity, message,
                 is_complex, logic_json,
-                enabled -- <--- YENİ: Sütun eklendi
+                enabled,
+                user_id -- <--- YENİ: Sütun eklendi
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
             RETURNING *`;
 
         const values = [
@@ -47,7 +65,8 @@ router.post("/", async (req, res) => {
             message,
             is_complex || false,
             logic_json || null,
-            enabled !== undefined ? enabled : true // Eğer boş gelirse varsayılan true
+            enabled !== undefined ? enabled : true,
+            user_id || 1 // Şimdilik default 1, auth gelince auth'tan alınacak
         ];
 
         const result = await pool.query(query, values);
@@ -58,7 +77,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-// 3. Kural Güncelleme (EDIT & TOGGLE)
+// 3. Kural Güncelleme (Güvenlik için user_id kontrolü eklenebilir)
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { 
@@ -66,7 +85,8 @@ router.put("/:id", async (req, res) => {
         static_value, target_tag_id, offset_value, 
         severity, message,
         is_complex, logic_json,
-        enabled // <--- YENİ: Toggle işlemi için bu kritik
+        enabled,
+        user_id // <--- YENİ: Sahibini de güncelliyoruz veya kontrol ediyoruz
     } = req.body;
 
     try {
@@ -83,8 +103,9 @@ router.put("/:id", async (req, res) => {
                 message = $9,
                 is_complex = $10,
                 logic_json = $11,
-                enabled = $12 -- <--- YENİ: Sütun güncelleniyor
-            WHERE id = $13 
+                enabled = $12,
+                user_id = $13 -- <--- YENİ
+            WHERE id = $14 
             RETURNING *`;
 
         const values = [
@@ -99,17 +120,18 @@ router.put("/:id", async (req, res) => {
             message,
             is_complex || false,
             logic_json || null,
-            enabled, // 12. parametre
-            id       // 13. parametre (WHERE id)
+            enabled,
+            user_id || 1,
+            id
         ];
 
         const result = await pool.query(query, values);
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: "Kural bulunamadı." });
+            return res.status(404).json({ error: "Kural bulunamadı veya yetkiniz yok." });
         }
 
-        console.log(`📝 Kural güncellendi veya Toggle edildi (ID: ${id}, Status: ${enabled})`);
+        console.log(`📝 Kural/Status güncellendi (ID: ${id}, User: ${user_id})`);
         res.json(result.rows[0]);
     } catch (err) {
         console.error("❌ Kural güncelleme hatası:", err.message);

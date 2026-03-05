@@ -3,28 +3,52 @@ import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3001';
 
+// 1. Socket.io Bağlantısı
 export const socket = io(BASE_URL);
 
+// 2. Axios Instance (Merkezi Yapı)
+const instance = axios.create({
+  baseURL: `${BASE_URL}/api`,
+});
+
+// 3. Güvenlik Kapısı (Interceptors)
+// Her istekte localStorage'daki token'ı kontrol eder ve varsa kafasına yapıştırır
+instance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 4. API Nesnesi
 export const api = {
-  // Bağlantı Rotaları
-  getConnections: () => axios.get(`${BASE_URL}/api/connections`),
-  addConnection: (data) => axios.post(`${BASE_URL}/api/connections`, data),
-  
-  // Kural Rotaları
-  getRules: () => axios.get(`${BASE_URL}/api/rules`),
-  //addRule: (data) => axios.post(`${BASE_URL}/api/rules`, data),
-  // src/services/api.js
-  addRule: (ruleData) => axios.post(`${BASE_URL}/api/rules`, ruleData),
-  deleteRule: (id) => axios.delete(`${BASE_URL}/api/rules/${id}`),
+  // --- GENEL METODLAR (Login/Register için şart!) ---
+  get: (url) => instance.get(url),
+  post: (url, data) => instance.post(url, data),
+  put: (url, data) => instance.put(url, data),
+  delete: (url) => instance.delete(url),
 
-  // ETİKET (TAG) ROTALARI - Eksik olan veya hata veren kısım burası
-  getTags: (connectionId) => axios.get(`${BASE_URL}/api/tags/${connectionId}`),
-  addTag: (data) => axios.post(`${BASE_URL}/api/tags`, data),
-  deleteTag: (id) => axios.delete(`${BASE_URL}/api/tags/${id}`),
+  // --- BAĞLANTI (CONNECTION) ROTALARI ---
+  getConnections: () => instance.get('/connections'),
+  addConnection: (data) => instance.post('/connections', data),
+  updateConnection: (id, data) => instance.put(`/connections/${id}`, data),
+  deleteConnection: (id) => instance.delete(`/connections/${id}`),
 
-  updateConnection: (id, data) => axios.put(`${BASE_URL}/api/connections/${id}`, data),
+  // --- KURAL (RULE) ROTALARI (Kanka ruleRoutes demiştik unutma!) ---
+  getRules: (userId) => instance.get(`/rules${userId ? `?userId=${userId}` : ''}`),
+  addRule: (ruleData) => instance.post('/rules', ruleData),
+  updateRule: (id, data) => instance.put(`/rules/${id}`, data),
+  deleteRule: (id) => instance.delete(`/rules/${id}`),
 
-  updateRule: (id, data) => axios.put(`${BASE_URL}/api/rules/${id}`, data),
+  // --- ETİKET (TAG) ROTALARI ---
+  getTags: (connectionId) => instance.get(`/tags/${connectionId}`),
+  addTag: (data) => instance.post('/tags', data),
+  deleteTag: (id) => instance.delete(`/tags/${id}`),
 
+  // --- DASHBOARD PERSISTENCE (Yeni vizyonumuz!) ---
+  getDashboard: (userId) => instance.get(`/dashboard/${userId}`),
+  saveDashboard: (userId, layout) => instance.post('/dashboard/save', { userId, layout }),
 };
 
+export default api;

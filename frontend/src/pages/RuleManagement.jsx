@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-const RuleManagement = ({ rules, connections, onRefresh }) => {
+// ✅ userId prop'unu buraya ekledik kanka
+const RuleManagement = ({ rules, connections, onRefresh, userId }) => {
   const [editingId, setEditingId] = useState(null);
   const [isComplex, setIsComplex] = useState(false);
   const [allTags, setAllTags] = useState([]); 
@@ -61,7 +62,12 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
 
   const handleToggleEnable = async (rule) => {
     try {
-      await api.updateRule(rule.id, { ...rule, enabled: !rule.enabled });
+      // ✅ Güncelleme yaparken de user_id bilgisini koruyoruz
+      await api.updateRule(rule.id, { 
+        ...rule, 
+        enabled: !rule.enabled,
+        user_id: userId // Güvenlik için sahibini tekrar belirtiyoruz
+      });
       onRefresh(); 
     } catch (err) {
       alert("Durum güncellenirken hata oluştu.");
@@ -149,8 +155,16 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
 
   const handleSaveRule = async (e) => {
     e.preventDefault();
+
+    // 🛑 GÜVENLİK KONTROLÜ: userId yoksa işleme başlama
+    if (!userId) {
+      alert("Oturum bilgisi eksik. Lütfen tekrar giriş yapın.");
+      return;
+    }
+
     const payload = {
       ...newRule,
+      user_id: userId, // ✅ KRİTİK EKSİK BURASIYDI: Kuralın sahibi artık operatör
       is_complex: isComplex,
       logic_json: isComplex ? complexLogic : null,
       tag_id: isComplex ? null : (newRule.tag_id || null),
@@ -160,13 +174,18 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
       offset_value: !isComplex && newRule.logic_type === 'compare' ? newRule.offset_value : 0
     };
 
+    // 🔍 DEBUG: Paketi göndermeden önce konsolda gör
+    console.log("📤 [RuleManagement] Gönderilen Payload:", payload);
+
     try {
       if (editingId) await api.updateRule(editingId, payload);
       else await api.addRule(payload);
+      
       handleCancelEdit();
       onRefresh();
     } catch (err) {
-      alert("İşlem başarısız oldu.");
+      console.error("❌ Kural kaydedilemedi:", err.response?.data);
+      alert(`İşlem başarısız: ${err.response?.data?.error || "Veritabanı hatası"}`);
     }
   };
 
@@ -243,7 +262,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
       {/* STANDART SAYFA BAŞLIĞI */}
       <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Logic Builder</h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Logic Builder</h1>
           <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">
             Heuristic Engine & Complex Decision Mapping
           </p>
@@ -273,7 +292,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                <div>
                 <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Rule Name</label>
                 <input type="text" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} 
-                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all" placeholder="e.g. Tank Pressure Check" />
+                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all font-bold" placeholder="e.g. Tank Pressure Check" />
                </div>
 
                <div>
@@ -307,23 +326,23 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
               <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-inner">
                   <label className="text-[10px] text-blue-500 block uppercase font-black tracking-widest italic text-center">Trigger Source</label>
-                  <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none">
+                  <select value={sourceConnId} onChange={(e) => setSourceConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none font-bold">
                     <option value="">Sistem Seçiniz...</option>
                     {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none disabled:opacity-20">
+                  <select value={newRule.tag_id} onChange={(e) => setNewRule({...newRule, tag_id: e.target.value})} disabled={!sourceConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 outline-none disabled:opacity-20 font-bold">
                     <option value="">Sensör Seçiniz...</option>
                     {sourceTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
                   </select>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-bold text-blue-400 outline-none">
+                    <select value={newRule.operator} onChange={(e) => setNewRule({...newRule, operator: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm font-black text-blue-400 outline-none">
                        {['>', '<', '==', '!=', '>=', '<='].map(op => <option key={op} value={op}>{op}</option>)}
                     </select>
                     <div className="flex-1 flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-white'}`}>STATIC</button>
-                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-bold rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-orange-600 text-white' : 'text-slate-600 hover:text-white'}`}>COMPARE</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'static'})} className={`flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${newRule.logic_type === 'static' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-600 hover:text-white'}`}>STATIC</button>
+                        <button type="button" onClick={() => setNewRule({...newRule, logic_type: 'compare'})} className={`flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${newRule.logic_type === 'compare' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-600 hover:text-white'}`}>COMPARE</button>
                     </div>
                 </div>
 
@@ -332,25 +351,25 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                     <div className="animate-in fade-in duration-300">
                       <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black">Sabit Eşik Değer (Threshold)</label>
                       <input type="number" step="0.1" value={newRule.static_value} onChange={e => setNewRule({...newRule, static_value: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500" placeholder="Değer..." />
+                        className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 font-bold" placeholder="Değer..." />
                     </div>
                   ) : (
                     <div className="space-y-4 animate-in slide-in-from-right-2 duration-300">
                       <label className="text-[10px] text-orange-500 block mb-2 uppercase font-black text-center italic">Kıyaslanacak Hedef (Target)</label>
                       <div className="grid grid-cols-2 gap-3">
-                        <select value={targetConnId} onChange={(e) => setTargetConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+                        <select value={targetConnId} onChange={(e) => setTargetConnId(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 font-bold">
                           <option value="">Hedef Sistem...</option>
                           {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                        <select value={newRule.target_tag_id} onChange={(e) => setNewRule({...newRule, target_tag_id: e.target.value})} disabled={!targetConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+                        <select value={newRule.target_tag_id} onChange={(e) => setNewRule({...newRule, target_tag_id: e.target.value})} disabled={!targetConnId} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 font-bold">
                           <option value="">Hedef Tag...</option>
                           {targetTags.map(t => <option key={t.id} value={t.id}>{t.tag_name}</option>)}
                         </select>
                       </div>
                       <div className="pt-2">
-                        <label className="text-[10px] text-slate-500 block mb-1 uppercase font-bold">Offset / Tolerans (+/-)</label>
+                        <label className="text-[10px] text-slate-500 block mb-1 uppercase font-black">Offset / Tolerans (+/-)</label>
                         <input type="number" value={newRule.offset_value} onChange={e => setNewRule({...newRule, offset_value: e.target.value})}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none" placeholder="Fark değeri..." />
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none font-bold" placeholder="Fark değeri..." />
                       </div>
                     </div>
                   )}
@@ -368,16 +387,16 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
             <div>
               <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest">Alert Message</label>
               <textarea value={newRule.message} onChange={(e) => setNewRule({...newRule, message: e.target.value})} 
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-300 outline-none h-20 resize-none focus:border-blue-500 transition-all" placeholder="Instructions for operator..." />
+                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-xs text-slate-300 outline-none h-20 resize-none focus:border-blue-500 transition-all font-medium italic" placeholder="Instructions for operator..." />
             </div>
 
             <div className="flex gap-4">
               {editingId && (
-                <button type="button" onClick={handleCancelEdit} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">
+                <button type="button" onClick={handleCancelEdit} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700">
                   Cancel
                 </button>
               )}
-              <button type="submit" className={`flex-[2] text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 hover:scale-[1.01] ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
+              <button type="submit" className={`flex-[2] text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 hover:scale-[1.01] uppercase tracking-[0.2em] text-[10px] ${editingId ? 'bg-amber-600 shadow-amber-900/40' : isComplex ? 'bg-purple-600 shadow-purple-900/40' : 'bg-blue-600 shadow-blue-900/40'}`}>
                 <Save size={20} /> {editingId ? 'UPDATE LOGIC' : 'DEPLOY ENGINE'}
               </button>
             </div>
@@ -418,12 +437,12 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
                           {isEnabled ? rule.severity : 'PASSIVE'}
                         </span>
                       </div>
-                      <div className={`text-xs font-mono mb-2 transition-colors flex items-center gap-2 ${isEnabled ? 'text-slate-500' : 'text-slate-700'}`}>
+                      <div className={`text-[10px] font-black mb-2 transition-colors flex items-center gap-2 uppercase tracking-tighter ${isEnabled ? 'text-slate-500' : 'text-slate-700'}`}>
                         <ArrowRightLeft size={12} className="opacity-50" />
                         {rule.is_complex ? (
-                          <span className="italic tracking-tight opacity-50 uppercase text-[10px]">Decision Tree Hierarchy</span>
+                          <span className="italic tracking-tight opacity-50 uppercase">Decision Tree Hierarchy</span>
                         ) : (
-                          <span className="opacity-70 uppercase tracking-tighter">IF [{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
+                          <span className="opacity-70">IF [{rule.tag_id}] {rule.operator} {rule.logic_type === 'static' ? rule.static_value : `Target:${rule.target_tag_id} (±${rule.offset_value})`}</span>
                         )}
                       </div>
                       <p className={`text-sm italic font-medium leading-relaxed transition-colors ${isEnabled ? 'text-slate-400' : 'text-slate-800'}`}>"{rule.message}"</p>
@@ -453,7 +472,7 @@ const RuleManagement = ({ rules, connections, onRefresh }) => {
         </div>
       </div>
     </div>
-  );  
+  );   
 };
 
 export default RuleManagement;
