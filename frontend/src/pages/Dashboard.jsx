@@ -1,44 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Gauge as GaugeIcon, Thermometer, Activity, Cpu, Plus, 
-  Settings2, X, Layout, Save, Move, LineChart, Radio
+  Settings2, X, Layout, Save, Move, LineChart, Radio, Loader2
 } from 'lucide-react';
+import { api } from '../services/api'; // API servisimizi bağladık
 
-const Dashboard = ({ liveData = {}, connections = [] }) => {
+const Dashboard = ({ liveData = {}, connections = [], userId }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // 1. WIDGET LİSTESİ (Kalıcı Kayıt)
-  const [widgets, setWidgets] = useState(() => {
-    const saved = localStorage.getItem('user_widgets');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // 1. WIDGET LİSTESİ (Artık DB'den gelecek)
+  const [widgets, setWidgets] = useState([]);
 
-  // 2. GEÇMİŞ VERİ (History) - Sparkline için son 30 değer
+  // 2. GEÇMİŞ VERİ (History) - Sparkline için
   const [history, setHistory] = useState({});
 
+  // 📥 3. DÜZENİ VERİTABANINDAN YÜKLE
   useEffect(() => {
-    localStorage.setItem('user_widgets', JSON.stringify(widgets));
-  }, [widgets]);
+    const fetchLayout = async () => {
+      if (!userId) return;
+      setLoading(true);
+      try {
+        console.log(`📡 [Dashboard] Düzen yükleniyor: User ${userId}`);
+        const res = await api.getDashboard(userId);
+        // Backend { layout: [...] } veya direkt [...] dönebilir, kontrol ediyoruz
+        const layoutData = res.data.layout || res.data;
+        if (Array.isArray(layoutData)) {
+          setWidgets(layoutData);
+        }
+      } catch (err) {
+        console.error("❌ Düzen yüklenemedi:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLayout();
+  }, [userId]);
 
-  // Canlı veri her değiştiğinde history state'ini güncelle
+  // 💾 4. DÜZENİ VERİTABANINA KAYDET (Edit mode kapatıldığında tetiklenir)
+  const toggleEditMode = async () => {
+    if (isEditMode) {
+      // Mod kapatılırken verileri DB'ye gönderiyoruz
+      try {
+        console.log("💾 [Dashboard] Düzen kaydediliyor...");
+        await api.saveDashboard(userId, widgets);
+        console.log("✅ [Dashboard] Kayıt başarılı.");
+      } catch (err) {
+        alert("Layout could not be synced with central server.");
+        console.error(err);
+      }
+    }
+    setIsEditMode(!isEditMode);
+  };
+
+  // Canlı veri geçmişini tutma (Sparkline)
   useEffect(() => {
     setHistory(prev => {
       const newHistory = { ...prev };
       Object.keys(liveData).forEach(key => {
         if (!newHistory[key]) newHistory[key] = [];
-        // Sadece son 30 veriyi tut
         newHistory[key] = [...newHistory[key], parseFloat(liveData[key] || 0)].slice(-30);
       });
       return newHistory;
     });
   }, [liveData]);
 
-  const [newWidget, setNewWidget] = useState({
-    type: 'numeric',
-    tagKey: '',
-    title: ''
-  });
+  const [newWidget, setNewWidget] = useState({ type: 'numeric', tagKey: '', title: '' });
 
   const addWidget = () => {
     if (!newWidget.tagKey) return;
@@ -61,39 +89,35 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
       case 'numeric':
         return (
           <div className="flex items-baseline gap-3 mt-2">
-            <span className="text-7xl font-black tracking-tighter text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.3)]">
+            <span className="text-7xl font-black tracking-tighter text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.3)] font-mono">
               {currentVal.toFixed(2)}
             </span>
-            <span className="text-xs text-slate-700 font-black uppercase tracking-[0.2em] italic">Units</span>
+            <span className="text-[10px] text-slate-700 font-black uppercase tracking-[0.2em] italic">Units</span>
           </div>
         );
 
       case 'gauge':
-        // Basit SVG Gauge (0-100 arası ölçeklendirme)
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
         const percentage = Math.min(Math.max(currentVal, 0), 100);
         const offset = circumference - (percentage / 100) * circumference;
-
         return (
           <div className="relative flex items-center justify-center h-40 mt-2">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800/50" />
               <circle cx="50" cy="50" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" 
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
+                strokeDasharray={circumference} strokeDashoffset={offset}
                 className="text-blue-500 transition-all duration-700 stroke-round"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black text-white">{currentVal.toFixed(1)}</span>
-              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-1">Percent %</span>
+              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest mt-1">% SCALE</span>
             </div>
           </div>
         );
 
       case 'sparkline':
-        // Mini Trend Grafiği (Normalizasyon dahil)
         const max = Math.max(...dataPoints, 1) * 1.2;
         const min = Math.min(...dataPoints, 0);
         const range = max - min;
@@ -102,13 +126,11 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
           const y = 50 - ((val - min) / range) * 40;
           return `${x},${y}`;
         }).join(' ');
-
         return (
-          <div className="h-32 w-full mt-4 bg-slate-900/40 rounded-3xl border border-slate-800/50 p-4 relative overflow-hidden group-hover:bg-slate-900/60 transition-all">
-            <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+          <div className="h-32 w-full mt-4 bg-slate-900/40 rounded-3xl border border-slate-800/50 p-4 relative overflow-hidden">
+            <svg viewBox="0 0 100 50" className="w-full h-full" preserveAspectRatio="none">
               <polyline fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
-                className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                points={points} 
+                className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" points={points} 
               />
             </svg>
             <div className="absolute bottom-3 right-5 text-right">
@@ -117,42 +139,44 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
             </div>
           </div>
         );
-
       default: return null;
     }
   };
 
-  const activeConnections = connections.filter(c => c.enabled);
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-blue-500" size={48} />
+      <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Retrieving Secure Node Layout</span>
+    </div>
+  );
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700 pb-20 px-4">
       
-      {/* 🏛️ HEADER */}
+      {/* HEADER */}
       <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Operations</h1>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Operations</h1>
           <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">
-            Customizable Live Monitoring Workspace
+            Operator ID: {userId} | Live Logic Monitoring
           </p>
         </div>
         
         <div className="flex gap-4">
           <button 
-            onClick={() => setIsEditMode(!isEditMode)}
+            onClick={toggleEditMode}
             className={`px-6 py-3 rounded-2xl flex items-center gap-2 transition-all font-black text-[10px] uppercase tracking-widest border shadow-xl ${
-              isEditMode 
-              ? 'bg-amber-500 text-black border-amber-400 scale-105' 
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+              isEditMode ? 'bg-amber-500 text-black border-amber-400 scale-105' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
             }`}
           >
             {isEditMode ? <Save size={18} /> : <Settings2 size={18} />}
-            {isEditMode ? 'Finish Layout' : 'Customize Panel'}
+            {isEditMode ? 'Lock Config' : 'Customize Panel'}
           </button>
 
           {isEditMode && (
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all font-black text-[10px] uppercase tracking-widest animate-in zoom-in"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl flex items-center gap-2 shadow-lg transition-all font-black text-[10px] uppercase tracking-widest animate-in zoom-in"
             >
               <Plus size={20} /> Add Widget
             </button>
@@ -160,12 +184,12 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
         </div>
       </div>
 
-      {/* 🏗️ GRID */}
+      {/* GRID */}
       {widgets.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-40 bg-slate-900/20 border-2 border-dashed border-slate-800 rounded-[3rem]">
           <Layout size={64} className="text-slate-800 mb-6 opacity-20" />
           <h3 className="text-xl font-black text-slate-600 tracking-tighter uppercase">No Dashboard Configured</h3>
-          <p className="text-slate-700 text-xs mt-2 italic">Switch to customize mode and deploy your first widget.</p>
+          <p className="text-slate-700 text-xs mt-2 italic uppercase tracking-widest font-black">Switch to customize mode to deploy nodes.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -173,20 +197,8 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
             <div key={w.id} className={`bg-slate-950/60 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl relative group transition-all hover:border-slate-600 overflow-hidden ${isEditMode ? 'ring-2 ring-amber-500/20' : ''}`}>
               
               {isEditMode && (
-                <button 
-                  onClick={() => removeWidget(w.id)}
-                  className="absolute top-5 right-5 p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all z-20 shadow-lg"
-                >
-                  <X size={16} />
-                </button>
+                <button onClick={() => removeWidget(w.id)} className="absolute top-5 right-5 p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all z-20"><X size={16} /></button>
               )}
-
-              {/* Arkaplan İkonu */}
-              <div className="absolute top-0 right-0 p-8 opacity-5 transform group-hover:rotate-12 transition-transform duration-700">
-                 {w.type === 'gauge' && <GaugeIcon size={60}/>}
-                 {w.type === 'numeric' && <Cpu size={60}/>}
-                 {w.type === 'sparkline' && <Activity size={60}/>}
-              </div>
 
               <h2 className="text-slate-500 text-[10px] mb-6 flex items-center gap-3 uppercase font-black tracking-[0.3em]">
                 {w.type === 'numeric' && <Cpu size={14} className="text-blue-500"/>}
@@ -195,7 +207,6 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
                 {w.title || w.tagKey.split(':')[1]}
               </h2>
 
-              {/* WIDGET CONTENT */}
               <div className="min-h-[120px] flex items-center">
                 {renderWidgetContent(w)}
               </div>
@@ -205,67 +216,42 @@ const Dashboard = ({ liveData = {}, connections = [] }) => {
                     <Radio size={12} className="text-slate-700 animate-pulse" />
                     <span className="text-[9px] font-mono text-slate-600 uppercase tracking-tighter">{w.tagKey.split(':')[0]}</span>
                  </div>
-                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" />
+                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ➕ MODAL */}
+      {/* MODAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[500] p-6 animate-in fade-in duration-300">
-          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-300">
-            <h3 className="text-3xl font-black text-white tracking-tighter uppercase mb-8">Deploy New Widget</h3>
-            
+          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-xl shadow-2xl animate-in zoom-in-95">
+            <h3 className="text-3xl font-black text-white tracking-tighter uppercase mb-8 italic">Deploy New Widget</h3>
             <div className="space-y-6">
               <div>
                 <label className="text-[10px] text-slate-500 block mb-3 uppercase font-black tracking-widest ml-1">Friendly Title</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-bold"
-                  placeholder="e.g. Pressure Sensor #4"
-                  value={newWidget.title}
-                  onChange={e => setNewWidget({...newWidget, title: e.target.value})}
-                />
+                <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-bold uppercase placeholder:text-slate-600"
+                  placeholder="e.g. PRESSURE_VALVE_04" value={newWidget.title} onChange={e => setNewWidget({...newWidget, title: e.target.value})} />
               </div>
-
               <div>
                 <label className="text-[10px] text-slate-500 block mb-3 uppercase font-black tracking-widest ml-1">Data Stream Source</label>
-                <select 
-                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-mono text-xs"
-                  value={newWidget.tagKey}
-                  onChange={e => setNewWidget({...newWidget, tagKey: e.target.value})}
-                >
+                <select className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 transition-all font-mono text-[10px] font-black uppercase"
+                  value={newWidget.tagKey} onChange={e => setNewWidget({...newWidget, tagKey: e.target.value})} >
                   <option value="">Select an active node...</option>
-                  {Object.keys(liveData).map(key => (
-                    <option key={key} value={key}>{key}</option>
-                  ))}
+                  {Object.keys(liveData).map(key => <option key={key} value={key}>{key}</option>)}
                 </select>
               </div>
-
               <div className="grid grid-cols-3 gap-4 pt-4">
-                {[
-                  { id: 'numeric', icon: <Cpu size={24}/>, label: 'Value' },
-                  { id: 'gauge', icon: <GaugeIcon size={24}/>, label: 'Gauge' },
-                  { id: 'sparkline', icon: <LineChart size={24}/>, label: 'Trend' }
-                ].map(item => (
-                  <button 
-                    key={item.id}
-                    onClick={() => setNewWidget({...newWidget, type: item.id})}
-                    className={`p-6 rounded-3xl border-2 flex flex-col items-center gap-3 transition-all ${
-                      newWidget.type === item.id ? 'bg-blue-600/10 border-blue-500 text-blue-400' : 'bg-slate-800 border-transparent text-slate-600 hover:bg-slate-750'
-                    }`}
-                  >
-                    {item.icon}
-                    <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+                {[{ id: 'numeric', icon: <Cpu size={24}/>, label: 'Value' }, { id: 'gauge', icon: <GaugeIcon size={24}/>, label: 'Gauge' }, { id: 'sparkline', icon: <LineChart size={24}/>, label: 'Trend' }].map(item => (
+                  <button key={item.id} onClick={() => setNewWidget({...newWidget, type: item.id})} className={`p-6 rounded-3xl border-2 flex flex-col items-center gap-3 transition-all ${newWidget.type === item.id ? 'bg-blue-600/10 border-blue-500 text-blue-400 shadow-lg shadow-blue-500/20' : 'bg-slate-800 border-transparent text-slate-600'}`}>
+                    {item.icon} <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
                   </button>
                 ))}
               </div>
-
               <div className="flex gap-4 pt-8">
-                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-700">Cancel</button>
-                <button onClick={addWidget} className="flex-[2] py-5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/40 hover:bg-blue-500 transition-all">Establish Widget</button>
+                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-5 rounded-2xl bg-slate-800 text-slate-400 font-black text-[10px] uppercase tracking-widest">Cancel</button>
+                <button onClick={addWidget} className="flex-[2] py-5 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/40">Establish Widget</button>
               </div>
             </div>
           </div>
