@@ -133,15 +133,28 @@ const RuleManagement = ({ rules, connections, onRefresh, userId }) => {
     if (path.length > 0) setComplexLogic(removeRecursive(complexLogic, path));
   };
 
-  const handleEditInit = (rule) => {
+const handleEditInit = (rule) => {
     setEditingId(rule.id);
     const complexStatus = rule.is_complex === true || rule.is_complex === 't';
     setIsComplex(complexStatus);
 
     if (complexStatus && rule.logic_json) {
       setComplexLogic(rule.logic_json);
-    } else {
-      setComplexLogic({ type: 'group', operator: 'AND', children: [] });
+    }
+
+    // 🎯 BURASI KRİTİK: Mevcut tag'lerin hangi bağlantıya ait olduğunu buluyoruz
+    // source_type null ise '0' (Virtual) kabul ediyoruz
+    const sourceTagObj = allTags.find(t => Number(t.id) === Number(rule.tag_id));
+    if (sourceTagObj) {
+        setSourceConnId(sourceTagObj.connection_id === null ? "0" : sourceTagObj.connection_id.toString());
+    }
+
+    // Eğer Compare mode ise hedef tag'in bağlantısını da bulalım
+    if (rule.logic_type === 'compare') {
+        const targetTagObj = allTags.find(t => Number(t.id) === Number(rule.target_tag_id));
+        if (targetTagObj) {
+            setTargetConnId(targetTagObj.connection_id === null ? "0" : targetTagObj.connection_id.toString());
+        }
     }
 
     setNewRule({
@@ -157,8 +170,9 @@ const RuleManagement = ({ rules, connections, onRefresh, userId }) => {
       is_complex: complexStatus,
       enabled: rule.enabled
     });
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  };;
 
   const handleCancelEdit = () => {
     setEditingId(null);
