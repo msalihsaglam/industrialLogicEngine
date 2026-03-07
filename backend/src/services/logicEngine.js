@@ -9,38 +9,32 @@ const lastValues = {};
 
 /**
  * ANA KONTROL VE HESAPLAMA MOTORU
- * Verinin girdiği ilk kapı burası kanka.
  */
 async function processData(sourceName, tagName, tagId, currentValue) {
-
     const val = parseFloat(currentValue);
     const numericId = Number(tagId);
     
     // 1. Gelen ham veriyi hafızaya (cache) yaz
     lastValues[numericId] = val;
 
-    // 💡 KRİTİK NOKTA: Buradaki logu görmen lazım
     console.log(`\n--------------------------------------------`);
     console.log(`📥 [LogicEngine] Ham Veri Girişi: ID ${numericId} = ${val}`);
 
     // 2. ⚡ FORMÜL MOTORUNU TETİKLE
-    // Eğer bu ID (Örn: T2) bir formülde kullanılıyorsa hesaplama yapılacak
     const calculatedResults = FormulaEngine.process({ tagId: numericId, value: val });
-    console.log(`🔗 [LogicEngine] Zincirleme Hesaplama: ${calculatedResults} `);
-    // 3. Ham veri (T1, T2 vb.) için alarmları kontrol et
+
+    // 3. Ham veri (Fiziksel Tag) için alarmları kontrol et
     await checkRules(numericId, val);
 
     // 4. 🚀 HESAPLANAN (VIRTUAL) SONUÇLAR VARSA ONLARI İŞLE
     if (calculatedResults && calculatedResults.length > 0) {
-        console.log(`🔗 [LogicEngine] Zincirleme Hesaplama Bulundu: ${calculatedResults.length} adet`);
-        
         for (const res of calculatedResults) {
             console.log(`🚀 [LogicEngine] Sanal Tag İşleniyor -> ID: ${res.tagId}, Değer: ${res.value}`);
             
-            // Hesaplanan değeri de merkezi cache'e yaz
+            // 💡 ÖNEMLİ: Sanal tag değerini hafızaya (Complex kural için) yaz
             lastValues[Number(res.tagId)] = res.value;
 
-            // 🎯 İŞTE ŞİMDİ "Aranan Tag ID: 16" LOGU ÇALIŞACAK!
+            // Sanal tag için alarmları kontrol et
             await checkRules(res.tagId, res.value);
         }
     }
@@ -58,39 +52,65 @@ async function checkRules(tagId, currentValue) {
         const res = await pool.query("SELECT * FROM rules WHERE enabled = true");
         const allRules = res.rows;
 
-        // Senin eklediğin o debug logu
-        console.log(`🧐 [LogicEngine] DB'den ${allRules.length} kural çekildi. Aranan Tag ID: ${numericTriggerId}`);
-
         for (let rule of allRules) {
-            const ruleTagId = Number(rule.tag_id);
             const isComplex = rule.is_complex === true || rule.is_complex === 't';
+            const ruleTagId = Number(rule.tag_id);
+            let isTriggered = false;
 
-            // EŞLEŞME KONTROLÜ
-            if (isComplex || ruleTagId === numericTriggerId) {
-                console.log(`✅ [EŞLEŞTİ] Tetikleniyor: ${rule.name}`);
-
+            // 🎯 A: COMPLEX LOGIC (AND/OR Ağacı)
+            if (isComplex && rule.logic_json) {
+                // Performans için: Sadece kuralın içinde bu tag geçiyorsa hesapla
+                const logicStr = JSON.stringify(rule.logic_json);
+                if (logicStr.includes(`"tag_id":"${numericTriggerId}"`) || logicStr.includes(`"tag_id":${numericTriggerId}`)) {
+                    console.log(`🧠 [LogicEngine] Complex Kural Analiz Ediliyor: ${rule.name}`);
+                    isTriggered = evaluateNode(rule.logic_json, lastValues);
+                }
+            } 
+            // 🎯 B: SIMPLE LOGIC (Statik/Compare)
+            else if (ruleTagId === numericTriggerId) {
                 const val1 = parseFloat(currentValue);
                 const val2 = parseFloat(rule.static_value);
-                const isTriggered = evaluateOperator(val1, rule.operator, val2);
+                isTriggered = evaluateOperator(val1, rule.operator, val2);
+            }
 
-                if (isTriggered) {
-                    console.log(`🚨 ALARM! ${rule.name} tetiklendi. Değer: ${val1} > ${val2}`);
-                    const userRoom = `user_${rule.user_id}`;
-                    if (io) {
-                        io.to(userRoom).emit("alarm", {
-                            id: Date.now() + Math.random(),
-                            ruleName: rule.name,
-                            message: rule.message,
-                            value: val1.toFixed(2),
-                            threshold: val2,
-                            severity: rule.severity,
-                            time: new Date().toLocaleTimeString('tr-TR')
-                        });
-                    }
+            // 🚨 ALARM TETİKLENDİ
+            if (isTriggered) {
+                console.log(`🚨 ALARM! ${rule.name} tetiklendi.`);
+                const userRoom = `user_${rule.user_id}`;
+                if (io) {
+                    io.to(userRoom).emit("alarm", {
+                        id: Date.now() + Math.random(),
+                        ruleName: rule.name,
+                        message: rule.message,
+                        value: parseFloat(currentValue).toFixed(2),
+                        threshold: rule.is_complex ? "COMPLEX" : rule.static_value,
+                        severity: rule.severity,
+                        time: new Date().toLocaleTimeString('tr-TR')
+                    });
                 }
             }
         }
     } catch (err) { console.error("checkRules Hatası:", err); }
+}
+
+/**
+ * COMPLEX LOGIC YARDIMCI FONKSİYONLARI (RECURSIVE)
+ */
+function evaluateNode(node, values) {
+    if (node.type === 'condition') {
+        const tagVal = values[Number(node.tag_id)];
+        if (tagVal === undefined) return false; // Veri gelmediyse false
+
+        return evaluateOperator(tagVal, node.op, parseFloat(node.val));
+    }
+
+    if (node.type === 'group') {
+        const results = node.children.map(child => evaluateNode(child, values));
+        return node.operator === 'AND' 
+            ? results.every(res => res === true)
+            : results.some(res => res === true);
+    }
+    return false;
 }
 
 function evaluateOperator(val1, op, val2) {
