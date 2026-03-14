@@ -11,7 +11,8 @@ import RuleManagement from './pages/RuleManagement';
 import ConnectionPage from './pages/ConnectionPage';
 import Incidents from './pages/Incidents';
 import UserManagement from './pages/UserManagement';
-import VirtualTags from './pages/VirtualTags'; // Yeni sayfamız
+import VirtualTags from './pages/VirtualTags';
+import HistorianSettings from './pages/HistorianSettings'; // 🗄️ YENİ SAYFA
 import Login from './pages/Login';
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
   const [connections, setConnections] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [openSubMenu, setOpenSubMenu] = useState(null); // Alt menü kontrolü
+  const [openSubMenu, setOpenSubMenu] = useState(null);
 
   const refreshAllData = (userId) => {
     if (!userId) return;
@@ -83,7 +84,7 @@ function App() {
     return <Login onLogin={handleLogin} />;
   }
 
-  // Menü Hiyerarşisi
+  // 📝 Menü Hiyerarşisi Güncellendi
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'operator'] },
     { id: 'incidents', label: 'Incidents', icon: <Zap size={20} />, roles: ['admin', 'operator'] },
@@ -98,6 +99,12 @@ function App() {
       ]
     },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} />, roles: ['admin', 'operator'] },
+    { 
+      id: 'historian', 
+      label: 'Historian Hub', 
+      icon: <Database size={20} />, // 🗄️ Merkezi Arşiv Yönetimi
+      roles: ['admin'] 
+    },
     { id: 'users', label: 'User Management', icon: <Users size={20} />, roles: ['admin'] },
   ];
 
@@ -115,7 +122,6 @@ function App() {
             .filter(item => item.roles.includes(user.role))
             .map((item) => (
               <div key={item.id} className="space-y-1">
-                {/* Ana Buton */}
                 <button 
                   onClick={() => {
                     if (item.children) {
@@ -136,13 +142,11 @@ function App() {
                   {isSidebarOpen && item.children && (
                     <ChevronDown size={14} className={`transition-transform duration-300 ${openSubMenu === item.id ? 'rotate-180' : ''}`} />
                   )}
-                  {/* Incident Badge */}
                   {item.id === 'incidents' && alarms.length > 0 && (
                     <span className="absolute right-2 bg-red-500 text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-pulse text-white">{alarms.length}</span>
                   )}
                 </button>
 
-                {/* Alt Menü (Sub-menu) */}
                 {isSidebarOpen && item.children && openSubMenu === item.id && (
                   <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 animate-in slide-in-from-top-2 duration-300">
                     {item.children.map(child => (
@@ -163,7 +167,6 @@ function App() {
           ))}
         </nav>
 
-        {/* User Info & Logout */}
         <div className="p-4 border-t border-slate-800 space-y-2 bg-slate-900/50">
           {isSidebarOpen && (
             <div className="flex items-center gap-3 px-3 py-2 text-slate-400 bg-slate-950/50 rounded-xl mb-2 border border-slate-800/50">
@@ -181,10 +184,10 @@ function App() {
       {/* MAIN CONTENT */}
       <main className={`flex-1 flex flex-col h-screen transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <header className="h-16 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur-md">
-           <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] italic opacity-60">
+            <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] italic opacity-60">
               <span>Security Node</span> <ChevronRight size={14} /> <span className="text-blue-400 tracking-normal">{activeTab.replace('_', ' ')}</span>
-           </div>
-           <div className="flex items-center gap-4">
+            </div>
+            <div className="flex items-center gap-4">
               <div className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border flex items-center gap-2 tracking-widest ${user.role === 'admin' ? 'text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'text-blue-500 bg-blue-500/10 border-blue-500/20'}`}>
                 {user.role === 'admin' ? <ShieldCheck size={12} /> : <User size={12} />}
                 {user.role} Authorization
@@ -192,7 +195,7 @@ function App() {
               <div className="text-[10px] font-mono text-green-400 bg-green-500/10 px-4 py-1.5 rounded-full border border-green-500/20 uppercase tracking-widest font-black animate-pulse">
                 {socket.connected ? "Node Online" : "Reconnecting"}
               </div>
-           </div>
+            </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
@@ -201,6 +204,7 @@ function App() {
           {activeTab === 'rules' && <RuleManagement rules={rules} connections={connections} onRefresh={() => refreshAllData(user.id)} userId={user.id} />}
           {activeTab === 'connections' && <ConnectionPage connections={connections} onRefresh={() => refreshAllData(user.id)} />}
           {activeTab === 'virtual_tags' && <VirtualTags connections={connections} />}
+          {activeTab === 'historian' && <HistorianSettings connections={connections} />} {/* 🗄️ YENİ ROUTE */}
           {activeTab === 'users' && <UserManagement />}
         </div>
       </main>

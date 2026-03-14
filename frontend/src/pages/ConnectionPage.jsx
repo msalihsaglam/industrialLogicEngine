@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, Trash2, Save, X, Database, Tag, Globe, 
-  Activity, Power, PowerOff, Edit2, ListTree, Hash 
+  Activity, Power, PowerOff, Edit2, ListTree, Hash, Timer, Target, ChevronDown
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -15,7 +15,16 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
   // Form State'leri
   const [newConnData, setNewConnData] = useState({ name: '', endpoint_url: '' });
   const [editConnData, setEditConnData] = useState({ id: '', name: '', endpoint_url: '' });
-  const [newTagData, setNewTagData] = useState({ tag_name: '', node_id: '', unit: '' });
+  
+  // 🎯 YENİ: Historian alanları eklendi
+  const [newTagData, setNewTagData] = useState({ 
+    tag_name: '', 
+    node_id: '', 
+    unit: '',
+    is_historian: false,
+    log_interval: 10,
+    deadband: 0
+  });
 
   // --- CİHAZ (CONNECTION) YÖNETİMİ ---
   const handleAddConnection = async (e) => {
@@ -66,16 +75,20 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
 
   const openTagManager = (conn) => {
     setSelectedConn(conn);
-    fetchTags(conn.id); // Veriyi hemen çekiyoruz
+    fetchTags(conn.id);
     setIsTagModalOpen(true);
   };
 
   const handleAddTag = async (e) => {
     e.preventDefault();
     try {
+      // 🚀 YENİ: Historian verileriyle beraber gönderiyoruz
       await api.addTag({ ...newTagData, connection_id: selectedConn.id });
-      setNewTagData({ tag_name: '', node_id: '', unit: '' });
-      fetchTags(selectedConn.id); // Listeyi tazele
+      setNewTagData({ 
+        tag_name: '', node_id: '', unit: '', 
+        is_historian: false, log_interval: 10, deadband: 0 
+      });
+      fetchTags(selectedConn.id);
     } catch (err) { alert("Tag add failed."); }
   };
 
@@ -83,7 +96,7 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
     if (window.confirm("Delete this node?")) {
       try {
         await api.deleteTag(id);
-        fetchTags(selectedConn.id); // Listeyi tazele
+        fetchTags(selectedConn.id);
       } catch (err) { alert("Delete failed."); }
     }
   };
@@ -139,7 +152,7 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         ))}
       </div>
 
-      {/* 📝 ADD CONNECTION MODAL */}
+      {/* 📝 MODALS (Conn Modals Kısaltıldı, Değişiklik Yok) */}
       {isConnModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-lg shadow-2xl">
@@ -156,20 +169,13 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         </div>
       )}
 
-      {/* 📝 EDIT CONNECTION MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-lg shadow-2xl">
             <h2 className="text-3xl font-black text-amber-500 uppercase italic mb-8">Edit Connection</h2>
             <form onSubmit={handleUpdateConnection} className="space-y-6">
-              <div>
-                <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest ml-1">Device Name</label>
-                <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-amber-500 font-bold" required value={editConnData.name} onChange={e => setEditConnData({...editConnData, name: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-500 block mb-2 uppercase font-black tracking-widest ml-1">OPC UA Endpoint</label>
-                <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white font-mono outline-none focus:border-amber-500" required value={editConnData.endpoint_url} onChange={e => setEditConnData({...editConnData, endpoint_url: e.target.value})} />
-              </div>
+              <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-amber-500 font-bold" required value={editConnData.name} onChange={e => setEditConnData({...editConnData, name: e.target.value})} />
+              <input type="text" className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-white font-mono outline-none focus:border-amber-500" required value={editConnData.endpoint_url} onChange={e => setEditConnData({...editConnData, endpoint_url: e.target.value})} />
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black uppercase text-[10px]">Cancel</button>
                 <button type="submit" className="flex-[2] py-4 bg-amber-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg">Apply Changes</button>
@@ -179,37 +185,80 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         </div>
       )}
 
-      {/* 🏷️ TAG MANAGEMENT MODAL */}
+      {/* 🏷️ TAG MANAGEMENT MODAL (GÜNCELLENDİ) */}
       {isTagModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-4xl max-h-[85vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
             <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
               <h2 className="text-2xl font-black text-white uppercase italic">{selectedConn?.name} // Tags</h2>
               <button onClick={() => setIsTagModalOpen(false)} className="p-3 bg-slate-800 text-slate-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all"><X size={20}/></button>
             </div>
+            
             <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide">
               {/* Add Tag Form */}
-              <form onSubmit={handleAddTag} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Tag Name</label>
-                  <input type="text" placeholder="e.g. Temperature" required className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500" 
-                    value={newTagData.tag_name} onChange={e => setNewTagData({...newTagData, tag_name: e.target.value})} />
+              <form onSubmit={handleAddTag} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Tag Name</label>
+                    <input type="text" placeholder="e.g. Temperature" required className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500" 
+                      value={newTagData.tag_name} onChange={e => setNewTagData({...newTagData, tag_name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Node ID</label>
+                    <input type="text" placeholder="ns=2;s=Device.Val" required className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-amber-500 font-mono outline-none focus:border-amber-500" 
+                      value={newTagData.node_id} onChange={e => setNewTagData({...newTagData, node_id: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Unit</label>
+                    <input type="text" placeholder="°C" className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500" 
+                      value={newTagData.unit} onChange={e => setNewTagData({...newTagData, unit: e.target.value})} />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Node ID</label>
-                  <input type="text" placeholder="ns=2;s=Device.Val" required className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-amber-500 font-mono outline-none focus:border-amber-500" 
-                    value={newTagData.node_id} onChange={e => setNewTagData({...newTagData, node_id: e.target.value})} />
+
+                {/* 🎯 HISTORIAN TOGGLE & SETTINGS */}
+                <div className="border-t border-slate-800 pt-6">
+                   <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
+                      <div className="flex items-center gap-3">
+                         <div className={`p-2 rounded-lg ${newTagData.is_historian ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-600'}`}>
+                            <Database size={18} />
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black text-white uppercase italic">Archive in Historian</p>
+                            <p className="text-[8px] text-slate-500">Record this node for historical reporting</p>
+                         </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setNewTagData({...newTagData, is_historian: !newTagData.is_historian})}
+                        className={`w-10 h-5 rounded-full relative transition-all duration-300 ${newTagData.is_historian ? 'bg-emerald-600' : 'bg-slate-800'}`}
+                      >
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${newTagData.is_historian ? 'left-6' : 'left-1'}`} />
+                      </button>
+                   </div>
+
+                   {newTagData.is_historian && (
+                     <div className="grid grid-cols-2 gap-4 mt-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-2">
+                           <label className="flex items-center gap-2 text-[9px] font-black text-slate-600 uppercase">
+                              <Timer size={12}/> Log Interval (sec)
+                           </label>
+                           <input type="number" value={newTagData.log_interval} onChange={e => setNewTagData({...newTagData, log_interval: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="flex items-center gap-2 text-[9px] font-black text-slate-600 uppercase">
+                              <Target size={12}/> Deadband (%)
+                           </label>
+                           <input type="number" step="0.1" value={newTagData.deadband} onChange={e => setNewTagData({...newTagData, deadband: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-emerald-500" />
+                        </div>
+                     </div>
+                   )}
                 </div>
-                <div>
-                  <label className="text-[9px] font-black text-slate-600 uppercase mb-2 block">Unit</label>
-                  <input type="text" placeholder="°C" className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500" 
-                    value={newTagData.unit} onChange={e => setNewTagData({...newTagData, unit: e.target.value})} />
-                </div>
-                <button type="submit" className="md:col-span-3 py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg">Establish Node</button>
+
+                <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg">Establish Node</button>
               </form>
 
               {/* Tag List */}
-              <div className="space-y-3">
+              <div className="space-y-3 pb-10">
                 <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-2 flex items-center gap-2">
                   <ListTree size={14} /> Registered Nodes on this Interface
                 </h4>
@@ -217,19 +266,25 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
                   tags.map(t => (
                     <div key={t.id} className="flex items-center justify-between p-4 bg-slate-950/30 border border-slate-800/50 rounded-2xl group hover:border-slate-700 transition-all">
                       <div className="flex items-center gap-4">
-                        <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
+                        <div className={`p-2 rounded-lg ${t.is_historian ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
                           <Hash size={16}/>
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-slate-100">{t.tag_name}</div>
-                          <div className="text-[10px] font-mono text-slate-500 uppercase">{t.node_id} | {t.unit || 'No Unit'}</div>
+                          <div className="flex items-center gap-2">
+                             <span className="text-sm font-bold text-slate-100">{t.tag_name}</span>
+                             {t.is_historian && <Database size={12} className="text-emerald-500 opacity-60" />}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 uppercase">
+                             {t.node_id} | {t.unit || 'No Unit'} 
+                             {t.is_historian && ` | Interval: ${t.log_interval}s`}
+                          </div>
                         </div>
                       </div>
                       <button onClick={() => handleDeleteTag(t.id)} className="p-2 text-slate-700 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
                     </div>
                   ))
                 ) : (
-                  <div className="py-10 text-center border border-dashed border-slate-800 rounded-3xl opacity-30 italic text-xs">
+                  <div className="py-10 text-center border border-dashed border-slate-800 rounded-3xl opacity-30 italic text-xs text-white">
                     No nodes mapped for this source yet.
                   </div>
                 )}

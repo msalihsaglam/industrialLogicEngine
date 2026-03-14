@@ -1,12 +1,12 @@
 import React from 'react';
 import { 
   Activity, Menu, LayoutDashboard, PlusCircle, 
-  Settings, History, Zap, ShieldAlert 
+  Settings, History, Zap, ShieldAlert, Database 
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) => {
   
-  // Menü öğelerine Incidents (Olaylar) kısmını ekledik
+  // Menü öğelerine Historian (Arşiv) kısmını ekledik
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { 
@@ -16,6 +16,11 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
       badge: alarmCount > 0 ? alarmCount : null 
     },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} /> },
+    { 
+      id: 'historian', 
+      label: 'Historian Hub', 
+      icon: <Database size={20} /> // 🗄️ Yeni: Arşiv Yönetimi
+    },
     { id: 'connections', label: 'Connections', icon: <Settings size={20} /> },
   ];
 
@@ -60,12 +65,11 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
               </div>
 
               {isOpen && (
-                <div className="ml-4 flex-1 flex justify-between items-center overflow-hidden">
+                <div className="ml-4 flex-1 flex justify-between items-center overflow-hidden text-left">
                   <span className="font-bold text-sm whitespace-nowrap tracking-tight">
                     {item.label}
                   </span>
                   
-                  {/* BİLDİRİM ROZETİ (Sadece Incidents için ve alarm varsa) */}
                   {item.badge && (
                     <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-red-500/20">
                       {item.badge}
@@ -74,7 +78,7 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
                 </div>
               )}
 
-              {/* SIDEBAR KAPALIYKEN TOOLTIP (Opsiyonel) */}
+              {/* SIDEBAR KAPALIYKEN BİLDİRİM NOKTASI */}
               {!isOpen && item.badge && (
                 <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse" />
               )}
@@ -83,7 +87,7 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
         })}
       </nav>
 
-      {/* ALT KISIM (OPSİYONEL: VERSİYON VEYA DURUM) */}
+      {/* ALT KISIM */}
       <div className="p-4 border-t border-slate-800/50">
         <div className={`flex items-center gap-3 px-2 ${!isOpen && 'justify-center'}`}>
            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />

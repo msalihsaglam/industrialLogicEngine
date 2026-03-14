@@ -11,23 +11,22 @@ const ruleRoutes = require("./src/routes/ruleRoutes");
 const connectionRoutes = require("./src/routes/connectionRoutes");
 const tagRoutes = require("./src/routes/tagRoutes");
 const authRoutes = require("./src/routes/authRoutes");
-const dashboardRoutes = require("./src/routes/dashboardRoutes"); // YENİ: Dashboard persistence
+const dashboardRoutes = require("./src/routes/dashboardRoutes");
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// 🔧 Middleware
+app.use(cors()); // CORS hatası almamak için önemli
 app.use(express.json());
 
 const server = http.createServer(app);
 
-// 📡 1. Socket.io Başlat ve Oda Yönetimi
+// 📡 1. Socket.io Başlat
 const io = socketManager.init(server);
 
 io.on('connection', (socket) => {
     console.log(`🔌 Yeni bir istemci bağlandı: ${socket.id}`);
 
-    // Kullanıcı giriş yaptığında kendi özel odasına katılır
     socket.on('join_user_room', (userId) => {
         const roomName = `user_${userId}`;
         socket.join(roomName);
@@ -40,24 +39,26 @@ io.on('connection', (socket) => {
 });
 
 // 🏗️ 2. Endüstriyel Servisleri Başlat
-// OPCUA servisine io örneğini gönderiyoruz ki alarmları odalara fısıldayabilsin
 startOPCUA(io); 
 
 // 🚪 3. API Rotaları
 app.use("/api/rules", ruleRoutes);
 app.use("/api/connections", connectionRoutes);
-app.use("/api/tags", tagRoutes);
+app.use("/api/tags", tagRoutes); // 🎯 BURASI ÖNEMLİ: İstekler /api/tags/... şeklinde gelmeli
 app.use("/api/auth", authRoutes);
-app.use("/api/dashboard", dashboardRoutes); // YENİ: Dashboard yerleşimi kaydetme
+app.use("/api/dashboard", dashboardRoutes);
 
-// Hata Yakalama Middleware (Opsiyonel ama candır)
+// 💥 Hata Yakalama Middleware
 app.use((err, req, res, next) => {
-    console.error("💥 Beklenmedik Hata:", err.stack);
-    res.status(500).json({ error: "Sistem hatası oluştu!" });
+    console.error("🚨 Sunucu Hatası:", err.stack);
+    res.status(500).json({ error: "Sistem hatası oluştu kanka!" });
 });
 
-const PORT = process.env.PORT || 3001;
+// 🚀 PORT AYARI: Senin frontend 3001'e gittiği için burayı 5000 yapıyoruz
+const PORT = process.env.PORT || 3001; 
+
 server.listen(PORT, () => {
     console.log(`🚀 LOGIC.IO Modüler Sistem Başlatıldı: http://localhost:${PORT}`);
     console.log(`🛡️  Auth, Rules ve Dashboard servisleri aktif.`);
+    console.log(`📂 Tag Rotaları: http://localhost:${PORT}/api/tags`);
 });

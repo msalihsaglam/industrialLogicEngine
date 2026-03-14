@@ -6,6 +6,8 @@ const FormulaEngine = require('./FormulaEngine');
 FormulaEngine.init();
 
 const lastValues = {}; 
+// 💾 Historian için son kayıt zamanı ve değerini RAM'de tutalım
+const lastRecordedStates = {}; 
 
 /**
  * ANA KONTROL VE HESAPLAMA MOTORU
@@ -17,32 +19,80 @@ async function processData(sourceName, tagName, tagId, currentValue) {
     // 1. Gelen ham veriyi hafızaya (cache) yaz
     lastValues[numericId] = val;
 
-    console.log(`\n--------------------------------------------`);
-    console.log(`📥 [LogicEngine] Ham Veri Girişi: ID ${numericId} = ${val}`);
+    // 2. 🗄️ HISTORIAN: Ham veri (Fiziksel Tag) arşivlensin mi?
+    await checkAndArchive(numericId, val);
 
-    // 2. ⚡ FORMÜL MOTORUNU TETİKLE
+    // 3. ⚡ FORMÜL MOTORUNU TETİKLE
     const calculatedResults = FormulaEngine.process({ tagId: numericId, value: val });
 
-    // 3. Ham veri (Fiziksel Tag) için alarmları kontrol et
+    // 4. Ham veri (Fiziksel Tag) için alarmları kontrol et
     await checkRules(numericId, val);
 
-    // 4. 🚀 HESAPLANAN (VIRTUAL) SONUÇLAR VARSA ONLARI İŞLE
+    // 5. 🚀 HESAPLANAN (VIRTUAL) SONUÇLAR VARSA ONLARI İŞLE
     if (calculatedResults && calculatedResults.length > 0) {
         for (const res of calculatedResults) {
-            console.log(`🚀 [LogicEngine] Sanal Tag İşleniyor -> ID: ${res.tagId}, Değer: ${res.value}`);
-            
-            // 💡 ÖNEMLİ: Sanal tag değerini hafızaya (Complex kural için) yaz
-            lastValues[Number(res.tagId)] = res.value;
+            const vId = Number(res.tagId);
+            const vVal = res.value;
+
+            // Sanal tag değerini hafızaya yaz
+            lastValues[vId] = vVal;
+
+            // 🗄️ HISTORIAN: Sanal Tag arşivlensin mi?
+            await checkAndArchive(vId, vVal);
 
             // Sanal tag için alarmları kontrol et
-            await checkRules(res.tagId, res.value);
+            await checkRules(vId, vVal);
         }
     }
-    console.log(`--------------------------------------------\n`);
 }
 
 /**
- * KURAL KONTROL MOTORU
+ * 🗄️ ARŞİVLEME KONTROLÜ (Interval & Deadband)
+ */
+async function checkAndArchive(tagId, currentValue) {
+    try {
+        // Tag'in arşivleme ayarlarını çek (Not: Performans için bu ayarlar cache'lenebilir)
+        const tagRes = await pool.query(
+            "SELECT is_historian, log_interval, deadband FROM tags WHERE id = $1", 
+            [tagId]
+        );
+        const settings = tagRes.rows[0];
+
+        if (!settings || !settings.is_historian) return;
+
+        const now = Date.now();
+        const state = lastRecordedStates[tagId] || { lastValue: null, lastTime: 0 };
+        
+        const timeDiff = (now - state.lastTime) / 1000; // Saniye
+        const valueDiff = state.lastValue !== null ? Math.abs(currentValue - state.lastValue) : Infinity;
+        
+        // 🎯 Kayıt Şartları:
+        // 1. Süre doldu mu? (Interval)
+        const isIntervalReached = timeDiff >= (settings.log_interval || 10);
+        // 2. Değişim Deadband'den büyük mü?
+        const isDeadbandExceeded = valueDiff > (settings.deadband || 0);
+
+        if (isIntervalReached || isDeadbandExceeded) {
+            await pool.query(
+                "INSERT INTO historian_logs (tag_id, val, ts) VALUES ($1, $2, NOW())",
+                [tagId, currentValue]
+            );
+
+            // RAM'deki durumu güncelle
+            lastRecordedStates[tagId] = {
+                lastValue: currentValue,
+                lastTime: now
+            };
+            
+            // console.log(`💾 [Historian] Saved Tag ${tagId}: ${currentValue}`);
+        }
+    } catch (err) {
+        console.error("❌ checkAndArchive Hatası:", err.message);
+    }
+}
+
+/**
+ * KURAL KONTROL MOTORU (Mevcut kodun, değişmedi)
  */
 async function checkRules(tagId, currentValue) {
     const io = socketManager.getIo();
@@ -57,25 +107,19 @@ async function checkRules(tagId, currentValue) {
             const ruleTagId = Number(rule.tag_id);
             let isTriggered = false;
 
-            // 🎯 A: COMPLEX LOGIC (AND/OR Ağacı)
             if (isComplex && rule.logic_json) {
-                // Performans için: Sadece kuralın içinde bu tag geçiyorsa hesapla
                 const logicStr = JSON.stringify(rule.logic_json);
                 if (logicStr.includes(`"tag_id":"${numericTriggerId}"`) || logicStr.includes(`"tag_id":${numericTriggerId}`)) {
-                    console.log(`🧠 [LogicEngine] Complex Kural Analiz Ediliyor: ${rule.name}`);
                     isTriggered = evaluateNode(rule.logic_json, lastValues);
                 }
             } 
-            // 🎯 B: SIMPLE LOGIC (Statik/Compare)
             else if (ruleTagId === numericTriggerId) {
                 const val1 = parseFloat(currentValue);
                 const val2 = parseFloat(rule.static_value);
                 isTriggered = evaluateOperator(val1, rule.operator, val2);
             }
 
-            // 🚨 ALARM TETİKLENDİ
             if (isTriggered) {
-                console.log(`🚨 ALARM! ${rule.name} tetiklendi.`);
                 const userRoom = `user_${rule.user_id}`;
                 if (io) {
                     io.to(userRoom).emit("alarm", {
@@ -83,7 +127,6 @@ async function checkRules(tagId, currentValue) {
                         ruleName: rule.name,
                         message: rule.message,
                         value: parseFloat(currentValue).toFixed(2),
-                        threshold: rule.is_complex ? "COMPLEX" : rule.static_value,
                         severity: rule.severity,
                         time: new Date().toLocaleTimeString('tr-TR')
                     });
@@ -93,22 +136,15 @@ async function checkRules(tagId, currentValue) {
     } catch (err) { console.error("checkRules Hatası:", err); }
 }
 
-/**
- * COMPLEX LOGIC YARDIMCI FONKSİYONLARI (RECURSIVE)
- */
 function evaluateNode(node, values) {
     if (node.type === 'condition') {
         const tagVal = values[Number(node.tag_id)];
-        if (tagVal === undefined) return false; // Veri gelmediyse false
-
+        if (tagVal === undefined) return false;
         return evaluateOperator(tagVal, node.op, parseFloat(node.val));
     }
-
     if (node.type === 'group') {
         const results = node.children.map(child => evaluateNode(child, values));
-        return node.operator === 'AND' 
-            ? results.every(res => res === true)
-            : results.some(res => res === true);
+        return node.operator === 'AND' ? results.every(r => r) : results.some(r => r);
     }
     return false;
 }

@@ -2,6 +2,7 @@ import io from 'socket.io-client';
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3001';
+const API_URL = 'http://localhost:3001/api';
 
 // 1. Socket.io Bağlantısı
 export const socket = io(BASE_URL);
@@ -49,6 +50,9 @@ export const api = {
   // --- DASHBOARD PERSISTENCE (Yeni vizyonumuz!) ---
   getDashboard: (userId) => instance.get(`/dashboard/${userId}`),
   saveDashboard: (userId, layout) => instance.post('/dashboard/save', { userId, layout }),
+
+  // 🎯 YENİ: Tag bilgilerini (Historian dahil) güncelleme metodu
+  updateTag: (id, data) => axios.put(`${API_URL}/tags/${id}`, data),
 };
 
 export default api;
