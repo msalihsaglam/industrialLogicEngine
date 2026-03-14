@@ -12,11 +12,9 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
   const [selectedConn, setSelectedConn] = useState(null);
   const [tags, setTags] = useState([]);
   
-  // Form State'leri
   const [newConnData, setNewConnData] = useState({ name: '', endpoint_url: '' });
   const [editConnData, setEditConnData] = useState({ id: '', name: '', endpoint_url: '' });
   
-  // 🎯 YENİ: Historian alanları eklendi
   const [newTagData, setNewTagData] = useState({ 
     tag_name: '', 
     node_id: '', 
@@ -82,7 +80,6 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
   const handleAddTag = async (e) => {
     e.preventDefault();
     try {
-      // 🚀 YENİ: Historian verileriyle beraber gönderiyoruz
       await api.addTag({ ...newTagData, connection_id: selectedConn.id });
       setNewTagData({ 
         tag_name: '', node_id: '', unit: '', 
@@ -117,42 +114,58 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
 
       {/* CİHAZ KARTLARI */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-4">
-        {connections.map(conn => (
-          <div key={conn.id} className={`bg-slate-900 border rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden transition-all duration-300 group ${conn.enabled ? 'border-slate-800 hover:border-slate-600' : 'border-red-900/10 opacity-40 bg-slate-950/50'}`}>
-            <div className={`absolute top-0 left-0 w-2 h-full ${!conn.enabled ? 'bg-slate-800' : (String(conn.status).toLowerCase() === 'connected' ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-red-500')}`} />
-            
-            <div className="flex justify-between items-start mb-8">
-               <div>
-                  <h3 className={`font-black text-2xl tracking-tight mb-2 ${conn.enabled ? 'text-slate-100' : 'text-slate-600'}`}>{conn.name}</h3>
-                  <p className="text-[10px] font-mono text-slate-500 truncate max-w-[180px]">{conn.endpoint_url}</p>
-                  <div className={`mt-3 text-[9px] font-black px-2 py-0.5 rounded border w-fit uppercase ${String(conn.status).toLowerCase() === 'connected' ? 'text-emerald-500 border-emerald-500/20' : 'text-red-500 border-red-500/20'}`}>
-                    {String(conn.status || 'offline').toUpperCase()}
-                  </div>
-               </div>
-               
-               <div className="flex flex-col gap-3">
-                 <button onClick={() => handleToggleEnabled(conn)} className={`p-3 rounded-2xl transition-all shadow-inner border ${conn.enabled ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 hover:bg-blue-600/20' : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}`}>
-                  {conn.enabled ? <Power size={20} /> : <PowerOff size={20} />}
-                 </button>
-                 <button onClick={() => { setEditConnData(conn); setIsEditModalOpen(true); }} className="p-3 rounded-2xl bg-slate-800 text-slate-500 border border-slate-700 hover:text-amber-500 transition-all">
-                   <Edit2 size={20} />
-                 </button>
-               </div>
+        {connections.map(conn => {
+          // Durum kontrolü için yardımcı değişken
+          const isOnline = String(conn.status).toLowerCase() === 'connected' || conn.status === true;
+          
+          return (
+            <div key={conn.id} className={`bg-slate-900 border rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden transition-all duration-300 group ${conn.enabled ? 'border-slate-800 hover:border-slate-600' : 'border-red-900/10 opacity-40 bg-slate-950/50'}`}>
+              
+              {/* Sol taraftaki durum şeridi */}
+              <div className={`absolute top-0 left-0 w-2 h-full transition-colors duration-500 ${!conn.enabled ? 'bg-slate-800' : (isOnline ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-red-500')}`} />
+              
+              <div className="flex justify-between items-start mb-8">
+                 <div>
+                    <h3 className={`font-black text-2xl tracking-tight mb-2 ${conn.enabled ? 'text-slate-100' : 'text-slate-600'}`}>{conn.name}</h3>
+                    <p className="text-[10px] font-mono text-slate-500 truncate max-w-[180px]">{conn.endpoint_url}</p>
+                    
+                    {/* 🟢 GÜNCELLENEN DURUM BADGE'İ */}
+                    <div className={`mt-4 text-[9px] font-black px-3 py-1 rounded-lg border w-fit uppercase tracking-tighter shadow-sm transition-all duration-500 ${
+                      isOnline 
+                        ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5' 
+                        : 'text-red-400 border-red-500/30 bg-red-500/5'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500'}`} />
+                        {isOnline ? 'Connection OK' : 'Source Offline'}
+                      </div>
+                    </div>
+                 </div>
+                 
+                 <div className="flex flex-col gap-3">
+                   <button onClick={() => handleToggleEnabled(conn)} className={`p-3 rounded-2xl transition-all shadow-inner border ${conn.enabled ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 hover:bg-blue-600/20' : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}`}>
+                    {conn.enabled ? <Power size={20} /> : <PowerOff size={20} />}
+                   </button>
+                   <button onClick={() => { setEditConnData(conn); setIsEditModalOpen(true); }} className="p-3 rounded-2xl bg-slate-800 text-slate-500 border border-slate-700 hover:text-amber-500 transition-all">
+                     <Edit2 size={20} />
+                   </button>
+                 </div>
+              </div>
+              
+              <div className="flex gap-3 mt-10">
+                <button disabled={!conn.enabled} onClick={() => openTagManager(conn)} className={`flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${conn.enabled ? 'bg-slate-800 hover:bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-700 cursor-not-allowed'}`}>
+                  <ListTree size={16}/> Manage Nodes
+                </button>
+                <button onClick={() => handleDeleteConnection(conn.id)} className="px-5 bg-slate-800 hover:bg-red-500/10 text-slate-600 hover:text-red-500 rounded-2xl transition-all border border-transparent hover:border-red-500/30">
+                  <Trash2 size={18}/>
+                </button>
+              </div>
             </div>
-            
-            <div className="flex gap-3 mt-10">
-              <button disabled={!conn.enabled} onClick={() => openTagManager(conn)} className={`flex-1 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${conn.enabled ? 'bg-slate-800 hover:bg-blue-600 text-white shadow-lg' : 'bg-slate-900 text-slate-700 cursor-not-allowed'}`}>
-                <ListTree size={16}/> Manage Nodes
-              </button>
-              <button onClick={() => handleDeleteConnection(conn.id)} className="px-5 bg-slate-800 hover:bg-red-500/10 text-slate-600 hover:text-red-500 rounded-2xl transition-all border border-transparent hover:border-red-500/30">
-                <Trash2 size={18}/>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* 📝 MODALS (Conn Modals Kısaltıldı, Değişiklik Yok) */}
+      {/* 📝 ESTABLISH CONNECTION MODAL */}
       {isConnModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-lg shadow-2xl">
@@ -169,6 +182,7 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         </div>
       )}
 
+      {/* 📝 EDIT CONNECTION MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-lg shadow-2xl">
@@ -185,7 +199,7 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         </div>
       )}
 
-      {/* 🏷️ TAG MANAGEMENT MODAL (GÜNCELLENDİ) */}
+      {/* 🏷️ TAG MANAGEMENT MODAL */}
       {isTagModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-4xl max-h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
@@ -195,7 +209,6 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
             </div>
             
             <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide">
-              {/* Add Tag Form */}
               <form onSubmit={handleAddTag} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -215,7 +228,6 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
                   </div>
                 </div>
 
-                {/* 🎯 HISTORIAN TOGGLE & SETTINGS */}
                 <div className="border-t border-slate-800 pt-6">
                    <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
                       <div className="flex items-center gap-3">
@@ -257,7 +269,6 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
                 <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg">Establish Node</button>
               </form>
 
-              {/* Tag List */}
               <div className="space-y-3 pb-10">
                 <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-2 flex items-center gap-2">
                   <ListTree size={14} /> Registered Nodes on this Interface
