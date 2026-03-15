@@ -40,9 +40,18 @@ function App() {
       socket.emit('join_user_room', parsedUser.id);
     }
 
-    socket.on('liveData', (data) => {
-      setLiveData(prev => ({ ...prev, [`${data.sourceName}:${data.tagName}`]: data.value }));
-    });
+socket.on("liveData", (data) => {
+  setLiveData(prev => ({
+    ...prev,
+    // Veriyi tagId üzerinden (unique) saklıyoruz
+    [data.tagId]: {
+      value: data.value,
+      tagName: data.tagName,
+      unit: data.unit,
+      sourceName: data.sourceName
+    }
+  }));
+});
 
     socket.on('alarm', (newAlarm) => {
       setAlarms(prev => [newAlarm, ...prev].slice(0, 50));
