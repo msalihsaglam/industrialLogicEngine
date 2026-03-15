@@ -15,10 +15,20 @@ router.get("/", async (req, res) => {
 
 // 2. Yeni bağlantı ekle
 router.post("/", async (req, res) => {
-    const { name, endpoint_url } = req.body;
+    // 🎯 connection_type'ı body'den çekiyoruz
+    const { name, endpoint_url, connection_type } = req.body; 
     try {
-        const query = "INSERT INTO connections (name, endpoint_url, enabled, status) VALUES ($1, $2, true, false) RETURNING *";
-        const result = await pool.query(query, [name, endpoint_url]);
+        // SQL sorgusuna connection_type alanını ekledik
+        const query = `
+            INSERT INTO connections (name, endpoint_url, enabled, status, connection_type) 
+            VALUES ($1, $2, true, false, $3) 
+            RETURNING *`;
+        
+        const result = await pool.query(query, [
+            name, 
+            endpoint_url, 
+            connection_type || 'standard' // Eğer boş gelirse varsayılan 'standard' olsun
+        ]);
         
         const newConn = result.rows[0];
         await addNewConnection(newConn.id); 
@@ -32,31 +42,30 @@ router.post("/", async (req, res) => {
 // 3. Bağlantı Düzenleme ve Durum Güncelleme (EDIT & TOGGLE)
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
-    const { name, endpoint_url, enabled } = req.body;
+    // 🎯 connection_type'ı body'den çekiyoruz
+    const { name, endpoint_url, enabled, connection_type } = req.body; 
     
     try {
-        // COALESCE kullanarak sadece gönderilen alanları güncelliyoruz, diğerleri aynı kalıyor
+        // COALESCE mantığına connection_type eklendi ($4 oldu)
         const query = `
             UPDATE connections 
             SET name = COALESCE($1, name), 
                 endpoint_url = COALESCE($2, endpoint_url), 
-                enabled = COALESCE($3, enabled) 
-            WHERE id = $4 
+                enabled = COALESCE($3, enabled),
+                connection_type = COALESCE($4, connection_type) 
+            WHERE id = $5 
             RETURNING *`;
         
-        const result = await pool.query(query, [name, endpoint_url, enabled, id]);
+        // Parametreleri sırasıyla gönderiyoruz (id artık $5)
+        const result = await pool.query(query, [name, endpoint_url, enabled, connection_type, id]);
         const updatedConn = result.rows[0];
 
         // --- CANLI YÖNETİM MANTIĞI ---
-        
         if (updatedConn.enabled === false) {
-            // Durum 'Pasif'e çekildiyse bağlantıyı her durumda durdur
             console.log(`🛑 [${updatedConn.name}] Bağlantısı durduruluyor...`);
             await stopConnection(id);
         } 
         else {
-            // Eğer durum 'Aktif' ise (veya aktif kalmaya devam ediyorsa):
-            // Ayarlar (URL/İsim) değişmiş olabileceği için eskisini kapatıp yenisini başlatıyoruz (Restart)
             console.log(`🔄 [${updatedConn.name}] Ayarlar güncelleniyor, bağlantı tazeleniyor...`);
             await stopConnection(id);
             await createConnection(updatedConn);
