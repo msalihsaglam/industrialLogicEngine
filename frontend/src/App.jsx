@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { 
   ChevronRight, Activity, Menu, LayoutDashboard, PlusCircle, 
-  Settings, Zap, LogOut, User, Users, Database, ChevronDown, Cpu 
+  Settings, Zap, LogOut, User, Users, Database, ChevronDown, Cpu, 
+  BarChart2, 
+  ShieldCheck as ShieldIcon, 
+  History as HistoryIcon // 🎯 Doğru Alias
 } from 'lucide-react'; 
 import { socket, api } from './services/api';
 
@@ -12,7 +15,8 @@ import ConnectionPage from './pages/ConnectionPage';
 import Incidents from './pages/Incidents';
 import UserManagement from './pages/UserManagement';
 import VirtualTags from './pages/VirtualTags';
-import HistorianSettings from './pages/HistorianSettings'; // 🗄️ YENİ SAYFA
+import HistorianSettings from './pages/HistorianSettings';
+import Reports from './pages/Reports';
 import Login from './pages/Login';
 
 function App() {
@@ -40,18 +44,17 @@ function App() {
       socket.emit('join_user_room', parsedUser.id);
     }
 
-socket.on("liveData", (data) => {
-  setLiveData(prev => ({
-    ...prev,
-    // Veriyi tagId üzerinden (unique) saklıyoruz
-    [data.tagId]: {
-      value: data.value,
-      tagName: data.tagName,
-      unit: data.unit,
-      sourceName: data.sourceName
-    }
-  }));
-});
+    socket.on("liveData", (data) => {
+      setLiveData(prev => ({
+        ...prev,
+        [data.tagId]: {
+          value: data.value,
+          tagName: data.tagName,
+          unit: data.unit,
+          sourceName: data.sourceName
+        }
+      }));
+    });
 
     socket.on('alarm', (newAlarm) => {
       setAlarms(prev => [newAlarm, ...prev].slice(0, 50));
@@ -93,7 +96,6 @@ socket.on("liveData", (data) => {
     return <Login onLogin={handleLogin} />;
   }
 
-  // 📝 Menü Hiyerarşisi Güncellendi
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'operator'] },
     { id: 'incidents', label: 'Incidents', icon: <Zap size={20} />, roles: ['admin', 'operator'] },
@@ -109,9 +111,15 @@ socket.on("liveData", (data) => {
     },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} />, roles: ['admin', 'operator'] },
     { 
+      id: 'reports', 
+      label: 'Intelligence', 
+      icon: <BarChart2 size={20} />, 
+      roles: ['admin', 'operator'] 
+    },
+    { 
       id: 'historian', 
       label: 'Historian Hub', 
-      icon: <Database size={20} />, // 🗄️ Merkezi Arşiv Yönetimi
+      icon: <HistoryIcon size={20} />, // 🎯 KRİTİK DÜZELTME: HistoryIcon kullanıldı
       roles: ['admin'] 
     },
     { id: 'users', label: 'User Management', icon: <Users size={20} />, roles: ['admin'] },
@@ -119,7 +127,6 @@ socket.on("liveData", (data) => {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* SIDEBAR */}
       <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col fixed h-full z-50 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && <div className="flex items-center gap-2 font-black text-blue-400 tracking-wider italic text-lg"><Activity size={24} /> <span>LOGIC.IO</span></div>}
@@ -173,7 +180,7 @@ socket.on("liveData", (data) => {
                   </div>
                 )}
               </div>
-          ))}
+            ))}
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-2 bg-slate-900/50">
@@ -190,7 +197,6 @@ socket.on("liveData", (data) => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className={`flex-1 flex flex-col h-screen transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <header className="h-16 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur-md">
             <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] italic opacity-60">
@@ -198,8 +204,8 @@ socket.on("liveData", (data) => {
             </div>
             <div className="flex items-center gap-4">
               <div className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border flex items-center gap-2 tracking-widest ${user.role === 'admin' ? 'text-amber-500 bg-amber-500/10 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'text-blue-500 bg-blue-500/10 border-blue-500/20'}`}>
-                {user.role === 'admin' ? <ShieldCheck size={12} /> : <User size={12} />}
-                {user.role} Authorization
+                <ShieldIcon size={12} />
+                <span className="ml-1">{user.role} Authorization</span>
               </div>
               <div className="text-[10px] font-mono text-green-400 bg-green-500/10 px-4 py-1.5 rounded-full border border-green-500/20 uppercase tracking-widest font-black animate-pulse">
                 {socket.connected ? "Node Online" : "Reconnecting"}
@@ -213,16 +219,13 @@ socket.on("liveData", (data) => {
           {activeTab === 'rules' && <RuleManagement rules={rules} connections={connections} onRefresh={() => refreshAllData(user.id)} userId={user.id} />}
           {activeTab === 'connections' && <ConnectionPage connections={connections} onRefresh={() => refreshAllData(user.id)} />}
           {activeTab === 'virtual_tags' && <VirtualTags connections={connections} />}
-          {activeTab === 'historian' && <HistorianSettings connections={connections} />} {/* 🗄️ YENİ ROUTE */}
+          {activeTab === 'historian' && <HistorianSettings connections={connections} />}
+          {activeTab === 'reports' && <Reports liveData={liveData} />}
           {activeTab === 'users' && <UserManagement />}
         </div>
       </main>
     </div>
   );
 }
-
-const ShieldCheck = ({ size }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-);
 
 export default App;

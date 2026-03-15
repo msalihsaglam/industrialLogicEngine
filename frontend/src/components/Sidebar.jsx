@@ -1,12 +1,11 @@
 import React from 'react';
 import { 
   Activity, Menu, LayoutDashboard, PlusCircle, 
-  Settings, History, Zap, ShieldAlert, Database 
+  Settings, History, Zap, ShieldAlert, Database, BarChart2 
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) => {
   
-  // Menü öğelerine Historian (Arşiv) kısmını ekledik
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { 
@@ -19,7 +18,13 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
     { 
       id: 'historian', 
       label: 'Historian Hub', 
-      icon: <Database size={20} /> // 🗄️ Yeni: Arşiv Yönetimi
+      icon: <Database size={20} /> 
+    },
+    // 🎯 YENİ: Raporlama ve Analiz Sekmesi
+    { 
+      id: 'reports', 
+      label: 'Intelligence', 
+      icon: <BarChart2 size={20} /> 
     },
     { id: 'connections', label: 'Connections', icon: <Settings size={20} /> },
   ];
@@ -34,7 +39,7 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
             <div className="p-1 bg-blue-500/10 rounded-lg">
               <Activity size={22} />
             </div>
-            <span className="text-lg">LOGIC.IO</span>
+            <span className="text-lg tracking-tighter">LOGIC.IO</span>
           </div>
         )}
         <button 
@@ -90,8 +95,8 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
       {/* ALT KISIM */}
       <div className="p-4 border-t border-slate-800/50">
         <div className={`flex items-center gap-3 px-2 ${!isOpen && 'justify-center'}`}>
-           <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-           {isOpen && <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Core Engine v3.1</span>}
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            {isOpen && <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Core Engine v3.1</span>}
         </div>
       </div>
     </aside>

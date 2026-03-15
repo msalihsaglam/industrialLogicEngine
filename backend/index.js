@@ -12,12 +12,14 @@ const connectionRoutes = require("./src/routes/connectionRoutes");
 const tagRoutes = require("./src/routes/tagRoutes");
 const authRoutes = require("./src/routes/authRoutes");
 const dashboardRoutes = require("./src/routes/dashboardRoutes");
-
+const reportRoutes = require("./src/routes/reportRoutes");
 const app = express();
 
 // 🔧 Middleware
 app.use(cors()); // CORS hatası almamak için önemli
 app.use(express.json());
+
+app.use("/api/reports", reportRoutes);
 
 const server = http.createServer(app);
 
