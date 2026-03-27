@@ -52,7 +52,10 @@ export const api = {
 
   // 📊 --- ANALYTICS & REPORTS (Yeni İstasyonumuz) ---
   // Enerji tüketimi için saatlik delta farklarını getirir
-  getEnergyDelta: (tagId) => instance.get(`/reports/energy-delta?tagId=${tagId}`),
+getEnergyDelta: (tagId, start, end) => 
+  instance.get('/reports/energy-delta', { 
+    params: { tagId, start, end } 
+  }),
   
   // Belirli bir tarih aralığındaki ham verileri getirir
   getHistory: (tagId, start, end) => instance.get('/reports/history', { 

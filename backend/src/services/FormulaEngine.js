@@ -28,7 +28,7 @@ init: async () => {
 
 // FormulaEngine.js -> process fonksiyonu
 process: (incomingData) => {
-        console.log(`🎯 [FormulaEngine] process icerisindeyim`);
+        //console.log(`🎯 [FormulaEngine] process icerisindeyim`);
         const { tagId, value } = incomingData;
         const tagKey = `T${tagId}`;
         tagCache[tagKey] = parseFloat(value);
@@ -40,7 +40,7 @@ process: (incomingData) => {
             const regex = new RegExp(`\\b${tagKey}\\b`);
             
             if (regex.test(ctag.formula)) {
-                console.log(`🎯 [FormulaEngine] Tetiklendi: ${tagKey} -> Formül: ${ctag.formula}`);
+                //console.log(`🎯 [FormulaEngine] Tetiklendi: ${tagKey} -> Formül: ${ctag.formula}`);
                 const res = FormulaEngine.calculate(ctag);
                 if (res) results.push(res);
             }
