@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Search, Save, Timer, Target, RefreshCcw, Activity, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { 
+  Database, Search, Save, Timer, Target, RefreshCcw, 
+  Activity, ShieldCheck, ShieldAlert, Layers, HardDrive, Info, Share2, Server
+} from 'lucide-react';
 import { api } from '../services/api';
 
 const HistorianSettings = ({ connections = [] }) => {
+  // --- 🔒 CORE LOGIC (FULLY PRESERVED) ---
   const [allTags, setAllTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,9 +35,6 @@ const HistorianSettings = ({ connections = [] }) => {
 
   const handleUpdateTag = async (tag, field, value) => {
     const updatedTag = { ...tag, [field]: value };
-    
-    console.log(`📤 Updating ${field}:`, value);
-
     try {
       await api.updateTag(tag.id, updatedTag);
       setAllTags(allTags.map(t => t.id === tag.id ? updatedTag : t));
@@ -49,89 +50,135 @@ const HistorianSettings = ({ connections = [] }) => {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20 px-4 pt-10">
+    <div className="max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-700 pb-20 px-6 pt-10 text-white">
       
-      {/* HEADER */}
-      <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
-        <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Historian Hub</h1>
-          <p className="text-slate-500 text-[10px] font-black tracking-[0.4em] mt-2 italic uppercase">Central Data Logging & Archive Optimization</p>
+      {/* 🏛️ SIEMENS STYLE HEADER (WITH INTEGRATED GUIDE) */}
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b-2 border-slate-800 pb-12">
+        
+        {/* Left: Title & Actions */}
+        <div className="space-y-1 min-w-[350px]">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-10 h-1 bg-[#00ffcc]"></div>
+            <span className="text-[#00ffcc] text-[10px] font-black uppercase tracking-[0.5em]">Data Persistence Layer</span>
+          </div>
+          <h1 className="text-5xl font-black tracking-tighter uppercase italic leading-none">Historian Hub</h1>
+          <p className="text-slate-500 text-[11px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 mt-4 italic">
+             <Server size={14} className="text-[#009999]" /> Central Archive & Record Management
+          </p>
+
+          <div className="relative group mt-8">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#009999] group-focus-within:text-[#00ffcc] transition-colors" size={20} />
+            <input 
+              type="text" 
+              placeholder="FILTER ARCHIVE NODES..." 
+              className="bg-slate-900 border-2 border-slate-800 rounded-2xl py-5 pl-14 pr-8 text-[11px] font-black text-white outline-none focus:border-[#009999] w-full lg:w-96 transition-all uppercase tracking-widest shadow-2xl"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
-          <input 
-            type="text" 
-            placeholder="SEARCH BY TAG OR SOURCE..." 
-            className="bg-slate-900 border border-slate-800 rounded-full py-3 pl-12 pr-6 text-[10px] font-black text-white outline-none focus:border-blue-500 w-80 transition-all uppercase tracking-widest"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+
+        {/* 🎯 RIGHT: INTEGRATED DATA PERSISTENCE GUIDE */}
+        <div className="flex-1 bg-slate-900/40 border-2 border-slate-800/50 p-6 rounded-[2.5rem] relative overflow-hidden flex flex-col md:flex-row gap-6">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Database size={80}/></div>
+            
+            <div className="p-4 bg-[#009999]/10 text-[#00ffcc] rounded-2xl h-fit shadow-inner">
+                <Info size={24}/>
+            </div>
+
+            <div className="space-y-4">
+                <h5 className="text-[11px] font-black text-white uppercase italic tracking-widest border-b border-slate-800 pb-2 inline-block">
+                    Archive Logic Optimization
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1">
+                        <p className="text-[10px] text-[#00ffcc] font-black uppercase tracking-tighter italic">Sampling</p>
+                        <p className="text-[9px] text-slate-500 font-bold leading-tight">Adjust 'Interval' to control database growth and sampling frequency.</p>
+                    </div>
+                    <div className="space-y-1 border-l-2 border-slate-800/50 pl-4">
+                        <p className="text-[10px] text-amber-500 font-black uppercase tracking-tighter italic">Signal Filter</p>
+                        <p className="text-[9px] text-slate-500 font-bold leading-tight">Use 'Deadband' to ignore minor fluctuations and filter signal noise.</p>
+                    </div>
+                    <div className="space-y-1 border-l-2 border-slate-800/50 pl-4">
+                        <p className="text-[10px] text-blue-400 font-black uppercase tracking-tighter italic">Persistence</p>
+                        <p className="text-[9px] text-slate-500 font-bold leading-tight">Active nodes are pushed to the time-series archive for reporting.</p>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-slate-900/50 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl backdrop-blur-md">
+      {/* 📊 ARCHIVE TABLE (FEATURES PROTECTED) */}
+      <div className="bg-[#0b1117] border-2 border-slate-800 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.4)] backdrop-blur-3xl relative">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#009999]/30 to-transparent"></div>
+        
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-950/50 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">
-              <th className="px-8 py-6">Status</th>
-              <th className="px-8 py-6">Tag Name</th>
-              <th className="px-8 py-6">Source</th>
-              <th className="px-8 py-6 text-center"><Timer size={14} className="inline mr-2" /> Interval (s)</th>
-              <th className="px-8 py-6 text-center"><Target size={14} className="inline mr-2" /> Deadband (%)</th>
-              <th className="px-8 py-6 text-right">Action</th>
+            <tr className="bg-slate-900/50 border-b-2 border-slate-800 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+              <th className="px-10 py-8">Archive State</th>
+              <th className="px-10 py-8">Node Identification</th>
+              <th className="px-10 py-8">Communication Interface</th>
+              <th className="px-10 py-8 text-center"><Timer size={16} className="inline mr-2 text-[#00ffcc]" /> Log Interval (S)</th>
+              <th className="px-10 py-8 text-center"><Target size={16} className="inline mr-2 text-[#00ffcc]" /> Deadband (%)</th>
+              <th className="px-10 py-8 text-right">Integrity</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50">
+          <tbody className="divide-y-2 divide-slate-800/50">
             {filteredTags.map((tag) => (
-              <tr key={tag.id} className={`group hover:bg-slate-800/30 transition-all ${tag.is_historian ? 'bg-emerald-500/5' : 'opacity-70'}`}>
-                <td className="px-8 py-6">
+              <tr key={tag.id} className={`group transition-all duration-300 ${tag.is_historian ? 'bg-[#009999]/5 hover:bg-[#009999]/10' : 'hover:bg-slate-800/30 opacity-60'}`}>
+                <td className="px-10 py-7">
                   <button 
                     onClick={() => handleUpdateTag(tag, 'is_historian', !tag.is_historian)}
-                    className={`w-12 h-6 rounded-full relative transition-all ${tag.is_historian ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-700'}`}
+                    className={`w-14 h-7 rounded-full relative transition-all duration-500 shadow-inner border-2 ${tag.is_historian ? 'bg-[#009999] border-[#00ffcc]/30 shadow-[0_0_20px_rgba(0,153,153,0.4)]' : 'bg-slate-800 border-slate-700'}`}
                   >
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${tag.is_historian ? 'left-7' : 'left-1'}`} />
+                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all duration-500 shadow-xl ${tag.is_historian ? 'left-8' : 'left-1'}`} />
                   </button>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-10 py-7">
                   <div className="flex flex-col">
-                    <span className="text-white font-black text-sm uppercase tracking-tight">{tag.tag_name}</span>
-                    <span className="text-slate-600 text-[9px] font-mono mt-1">{tag.node_id || 'CALCULATED'}</span>
+                    <span className="text-white font-black text-lg uppercase tracking-tighter italic">{tag.tag_name}</span>
+                    <span className="text-[#00ffcc] text-[9px] font-mono mt-1 opacity-60 tracking-widest">{tag.node_id || 'INTERNAL_CALCULATION'}</span>
                   </div>
                 </td>
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-2">
-                    <Activity size={12} className={tag.type === 'virtual' ? 'text-purple-500' : 'text-blue-500'} />
-                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{tag.connName}</span>
+                <td className="px-10 py-7">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${tag.type === 'virtual' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-[#009999]/10 text-[#00ffcc] border border-[#009999]/20'}`}>
+                        <Activity size={14} />
+                    </div>
+                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{tag.connName}</span>
                   </div>
                 </td>
-                <td className="px-8 py-6">
-                  <input 
-                    type="number" 
-                    value={tag.log_interval} 
-                    onChange={(e) => handleUpdateTag(tag, 'log_interval', e.target.value)}
-                    className={`w-20 mx-auto block bg-slate-950/50 border rounded-lg p-2 text-center text-xs text-white focus:border-blue-500 outline-none transition-all font-bold ${tag.is_historian ? 'border-emerald-500/50' : 'border-slate-800'}`}
-                  />
+                <td className="px-10 py-7">
+                  <div className="flex justify-center">
+                    <input 
+                        type="number" 
+                        value={tag.log_interval} 
+                        onChange={(e) => handleUpdateTag(tag, 'log_interval', e.target.value)}
+                        className={`w-24 bg-slate-950 border-2 rounded-xl p-3 text-center text-xs text-white focus:border-[#00ffcc] outline-none transition-all font-black shadow-inner ${tag.is_historian ? 'border-[#009999]/50 shadow-[0_0_15px_rgba(0,153,153,0.1)]' : 'border-slate-800 text-slate-600'}`}
+                    />
+                  </div>
                 </td>
-                <td className="px-8 py-6">
-                  <input 
-                    type="number" 
-                    step="0.1"
-                    value={tag.deadband} 
-                    onChange={(e) => handleUpdateTag(tag, 'deadband', e.target.value)}
-                    className={`w-20 mx-auto block bg-slate-950/50 border rounded-lg p-2 text-center text-xs text-white focus:border-blue-500 outline-none transition-all font-bold ${tag.is_historian ? 'border-emerald-500/50' : 'border-slate-800'}`}
-                  />
+                <td className="px-10 py-7">
+                   <div className="flex justify-center">
+                    <input 
+                        type="number" 
+                        step="0.1"
+                        value={tag.deadband} 
+                        onChange={(e) => handleUpdateTag(tag, 'deadband', e.target.value)}
+                        className={`w-24 bg-slate-950 border-2 rounded-xl p-3 text-center text-xs text-white focus:border-[#00ffcc] outline-none transition-all font-black shadow-inner ${tag.is_historian ? 'border-[#009999]/50 shadow-[0_0_15px_rgba(0,153,153,0.1)]' : 'border-slate-800 text-slate-600'}`}
+                    />
+                  </div>
                 </td>
-                <td className="px-8 py-6 text-right">
+                <td className="px-10 py-7 text-right">
                   {tag.is_historian ? (
-                    <div className="flex items-center justify-end gap-2 text-emerald-500 font-black text-[10px] uppercase italic">
-                      <span className="animate-pulse">Active Logging</span>
-                      <ShieldCheck size={20} />
+                    <div className="flex items-center justify-end gap-3 text-[#00ffcc] font-black text-[10px] uppercase italic tracking-widest">
+                      <span className="animate-pulse">Active Recording</span>
+                      <ShieldCheck size={22} className="text-[#00ffcc]" />
                     </div>
                   ) : (
-                    <div className="flex items-center justify-end gap-2 text-slate-700 font-black text-[10px] uppercase italic">
-                      <span>Standby</span>
-                      <ShieldAlert size={20} />
+                    <div className="flex items-center justify-end gap-3 text-slate-700 font-black text-[10px] uppercase italic tracking-widest opacity-40">
+                      <span>Offline Standby</span>
+                      <ShieldAlert size={22} />
                     </div>
                   )}
                 </td>
@@ -139,7 +186,13 @@ const HistorianSettings = ({ connections = [] }) => {
             ))}
           </tbody>
         </table>
-        {loading && <div className="py-20 text-center text-blue-500 font-black italic tracking-widest animate-pulse">SYNCHRONIZING HISTORIAN DATA...</div>}
+        
+        {loading && (
+            <div className="py-32 flex flex-col items-center justify-center gap-6 bg-slate-950/50 backdrop-blur-md">
+                <RefreshCcw className="animate-spin text-[#00ffcc]" size={48} />
+                <span className="text-[11px] font-black uppercase tracking-[0.5em] text-[#009999] animate-pulse">Syncing Archive Parameters</span>
+            </div>
+        )}
       </div>
     </div>
   );

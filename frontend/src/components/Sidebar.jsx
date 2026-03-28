@@ -1,57 +1,62 @@
 import React from 'react';
 import { 
   Activity, Menu, LayoutDashboard, PlusCircle, 
-  Settings, History, Zap, ShieldAlert, Database, BarChart2 
+  Settings, History, Zap, ShieldAlert, Database, BarChart2, 
+  Terminal, ShieldCheck, Cpu, Layout
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) => {
   
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: 'dashboard', label: 'OPERATIONS', icon: <LayoutDashboard size={20} /> },
     { 
       id: 'incidents', 
-      label: 'Incidents', 
+      label: 'INCIDENTS', 
       icon: <Zap size={20} />, 
       badge: alarmCount > 0 ? alarmCount : null 
     },
-    { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} /> },
+    { id: 'rules', label: 'LOGIC BUILDER', icon: <PlusCircle size={20} /> },
+    { id: 'virtual', label: 'VIRTUAL NODES', icon: <Cpu size={20} /> },
     { 
       id: 'historian', 
-      label: 'Historian Hub', 
+      label: 'HISTORIAN HUB', 
       icon: <Database size={20} /> 
     },
-    // 🎯 YENİ: Raporlama ve Analiz Sekmesi
     { 
       id: 'reports', 
-      label: 'Intelligence', 
+      label: 'INTELLIGENCE', 
       icon: <BarChart2 size={20} /> 
     },
-    { id: 'connections', label: 'Connections', icon: <Settings size={20} /> },
+    { id: 'connections', label: 'CONNECTIVITY', icon: <Settings size={20} /> },
+    { id: 'users', label: 'ACCESS CONTROL', icon: <ShieldCheck size={20} /> },
   ];
 
   return (
-    <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col fixed h-full z-50 ${isOpen ? 'w-64' : 'w-20'}`}>
+    <aside className={`bg-[#0b1117] border-r-2 border-slate-800 transition-all duration-500 flex flex-col fixed h-full z-[1000] shadow-[10px_0_50px_rgba(0,0,0,0.5)] ${isOpen ? 'w-80' : 'w-24'}`}>
       
-      {/* LOGO ALANI */}
-      <div className="p-6 flex items-center justify-between">
+      {/* 🏛️ SIEMENS STYLE LOGO SECTION */}
+      <div className="p-8 flex items-center justify-between border-b-2 border-slate-800/50">
         {isOpen && (
-          <div className="flex items-center gap-2 font-black text-blue-400 tracking-tighter">
-            <div className="p-1 bg-blue-500/10 rounded-lg">
-              <Activity size={22} />
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div className="p-2 bg-[#009999]/20 text-[#00ffcc] rounded-xl border border-[#009999]/30 shadow-inner">
+              <Activity size={24} className="animate-pulse" />
             </div>
-            <span className="text-lg tracking-tighter">LOGIC.IO</span>
+            <div className="flex flex-col">
+                <span className="text-xl font-black text-white tracking-tighter italic leading-none">LOGIC.IO</span>
+                <span className="text-[8px] font-black text-[#009999] tracking-[0.4em] uppercase mt-1">Industrial Core</span>
+            </div>
           </div>
         )}
         <button 
           onClick={toggle} 
-          className={`p-2 hover:bg-slate-800 rounded-xl text-slate-400 transition-colors ${!isOpen && 'mx-auto'}`}
+          className={`p-3 hover:bg-slate-800 rounded-2xl text-slate-500 hover:text-[#00ffcc] transition-all border-2 border-transparent hover:border-[#009999]/20 ${!isOpen && 'mx-auto shadow-xl bg-slate-900'}`}
         >
-          <Menu size={20} />
+          <Menu size={22} />
         </button>
       </div>
 
-      {/* NAVİGASYON LİSTESİ */}
-      <nav className="flex-1 px-3 space-y-2 mt-4">
+      {/* 🧭 NAVIGATION LIST */}
+      <nav className="flex-1 px-4 space-y-3 mt-8 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
           
@@ -59,44 +64,57 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
             <button 
               key={item.id} 
               onClick={() => setActiveTab(item.id)} 
-              className={`w-full flex items-center p-3 rounded-2xl transition-all relative group ${
+              className={`w-full flex items-center p-4 rounded-2xl transition-all duration-300 relative group overflow-hidden ${
                 isActive 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-200'
+                ? 'bg-[#009999]/10 text-[#00ffcc] shadow-[0_0_25px_rgba(0,153,153,0.1)] border border-[#009999]/20' 
+                : 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-200 border border-transparent'
               }`}
             >
-              <div className={`min-w-[20px] transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+              {/* Active Indicator Bar */}
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-[#00ffcc] rounded-r-full shadow-[0_0_15px_rgba(0,255,204,0.5)]" />
+              )}
+
+              <div className={`min-w-[24px] transition-all duration-500 flex justify-center ${isActive ? 'scale-110 text-[#00ffcc]' : 'group-hover:scale-110 group-hover:text-white'}`}>
                 {item.icon}
               </div>
 
               {isOpen && (
-                <div className="ml-4 flex-1 flex justify-between items-center overflow-hidden text-left">
-                  <span className="font-bold text-sm whitespace-nowrap tracking-tight">
+                <div className="ml-5 flex-1 flex justify-between items-center overflow-hidden text-left animate-in fade-in slide-in-from-left-2">
+                  <span className={`font-black text-[11px] uppercase italic tracking-widest transition-colors ${isActive ? 'text-white' : 'text-slate-500'}`}>
                     {item.label}
                   </span>
                   
                   {item.badge && (
-                    <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-red-500/20">
+                    <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg animate-pulse shadow-lg shadow-red-900/40 border border-red-400/30">
                       {item.badge}
                     </span>
                   )}
                 </div>
               )}
 
-              {/* SIDEBAR KAPALIYKEN BİLDİRİM NOKTASI */}
+              {/* COLLAPSED NOTIFICATION DOT */}
               {!isOpen && item.badge && (
-                <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse" />
+                <div className="absolute top-3 right-3 w-3 h-3 bg-red-600 rounded-full border-2 border-[#0b1117] animate-pulse shadow-lg shadow-red-900/50" />
               )}
             </button>
           );
         })}
       </nav>
 
-      {/* ALT KISIM */}
-      <div className="p-4 border-t border-slate-800/50">
-        <div className={`flex items-center gap-3 px-2 ${!isOpen && 'justify-center'}`}>
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-            {isOpen && <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Core Engine v3.1</span>}
+      {/* 🛰️ SYSTEM STATUS FOOTER */}
+      <div className="p-6 border-t-2 border-slate-800/50 bg-slate-950/30">
+        <div className={`flex items-center gap-4 px-2 ${!isOpen && 'justify-center'}`}>
+            <div className="relative">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse" />
+                <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-20" />
+            </div>
+            {isOpen && (
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">Core Engine Active</span>
+                    <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">V3.1 // SECURE_NODE</span>
+                </div>
+            )}
         </div>
       </div>
     </aside>
