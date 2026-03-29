@@ -32,9 +32,10 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
   ];
 
   return (
-    <aside className={`bg-[#0b1117] border-r-2 border-slate-800 transition-all duration-500 flex flex-col fixed h-full z-[1000] shadow-[10px_0_50px_rgba(0,0,0,0.5)] ${isOpen ? 'w-80' : 'w-24'}`}>
+    // font-['Inter'] ekleyerek tüm sidebar'ı bu font ailesine zorladık
+    <aside className={`bg-[#0b1117] border-r-2 border-slate-800 transition-all duration-500 flex flex-col fixed h-full z-[1000] shadow-[10px_0_50px_rgba(0,0,0,0.5)] font-['Inter',_sans-serif] ${isOpen ? 'w-80' : 'w-24'}`}>
       
-      {/* 🏛️ SIEMENS STYLE LOGO SECTION */}
+      {/* 🏛️ LOGO SECTION */}
       <div className="p-8 flex items-center justify-between border-b-2 border-slate-800/50">
         {isOpen && (
           <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -42,8 +43,9 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
               <Activity size={24} className="animate-pulse" />
             </div>
             <div className="flex flex-col">
-                <span className="text-xl font-black text-white tracking-tighter italic leading-none">LOGIC.IO</span>
-                <span className="text-[8px] font-black text-[#009999] tracking-[0.4em] uppercase mt-1">Industrial Core</span>
+                {/* Logo için font-bold ve tracking-tighter daha modern durur */}
+                <span className="text-xl font-bold text-white tracking-tighter italic leading-none">LOGIC.IO</span>
+                <span className="text-[9px] font-semibold text-[#009999] tracking-[0.3em] uppercase mt-1">Industrial Core</span>
             </div>
           </div>
         )}
@@ -66,36 +68,35 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
               onClick={() => setActiveTab(item.id)} 
               className={`w-full flex items-center p-4 rounded-2xl transition-all duration-300 relative group overflow-hidden ${
                 isActive 
-                ? 'bg-[#009999]/10 text-[#00ffcc] shadow-[0_0_25px_rgba(0,153,153,0.1)] border border-[#009999]/20' 
+                ? 'bg-[#009999]/15 text-[#00ffcc] border border-[#009999]/30' 
                 : 'text-slate-500 hover:bg-slate-800/40 hover:text-slate-200 border border-transparent'
               }`}
             >
-              {/* Active Indicator Bar */}
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-[#00ffcc] rounded-r-full shadow-[0_0_15px_rgba(0,255,204,0.5)]" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#00ffcc] rounded-r-full shadow-[0_0_15px_rgba(0,255,204,0.6)]" />
               )}
 
-              <div className={`min-w-[24px] transition-all duration-500 flex justify-center ${isActive ? 'scale-110 text-[#00ffcc]' : 'group-hover:scale-110 group-hover:text-white'}`}>
+              <div className={`min-w-[24px] transition-all duration-500 flex justify-center ${isActive ? 'scale-105 text-[#00ffcc]' : 'group-hover:text-white'}`}>
                 {item.icon}
               </div>
 
               {isOpen && (
                 <div className="ml-5 flex-1 flex justify-between items-center overflow-hidden text-left animate-in fade-in slide-in-from-left-2">
-                  <span className={`font-black text-[11px] uppercase italic tracking-widest transition-colors ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                  {/* GÜNCELLEME: font-black yerine font-semibold, text-xs ve tracking-wide okunaklılığı artırır */}
+                  <span className={`font-semibold text-[12px] uppercase tracking-wide transition-colors ${isActive ? 'text-white' : 'text-slate-500'}`}>
                     {item.label}
                   </span>
                   
                   {item.badge && (
-                    <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg animate-pulse shadow-lg shadow-red-900/40 border border-red-400/30">
+                    <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md animate-pulse border border-red-400/30">
                       {item.badge}
                     </span>
                   )}
                 </div>
               )}
 
-              {/* COLLAPSED NOTIFICATION DOT */}
               {!isOpen && item.badge && (
-                <div className="absolute top-3 right-3 w-3 h-3 bg-red-600 rounded-full border-2 border-[#0b1117] animate-pulse shadow-lg shadow-red-900/50" />
+                <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-[#0b1117] animate-pulse" />
               )}
             </button>
           );
@@ -106,13 +107,13 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0 }) =>
       <div className="p-6 border-t-2 border-slate-800/50 bg-slate-950/30">
         <div className={`flex items-center gap-4 px-2 ${!isOpen && 'justify-center'}`}>
             <div className="relative">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse" />
-                <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-20" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]" />
+                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-25" />
             </div>
             {isOpen && (
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">Core Engine Active</span>
-                    <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">V3.1 // SECURE_NODE</span>
+                    <span className="text-[10px] font-bold text-white uppercase tracking-tight">Core Engine Active</span>
+                    <span className="text-[9px] font-medium text-slate-600 uppercase tracking-widest mt-0.5 opacity-70">V3.1 // SECURE_NODE</span>
                 </div>
             )}
         </div>

@@ -43,21 +43,22 @@ export const api = {
   // --- ETİKET (TAG) ROTALARI ---
   getTags: (connectionId) => instance.get(`/tags/${connectionId}`),
   addTag: (data) => instance.post('/tags', data),
-  updateTag: (id, data) => instance.put(`/tags/${id}`, data), // 🎯 axios yerine instance kullanıldı
+  updateTag: (id, data) => instance.put(`/tags/${id}`, data),
+  
+  // ✅ DÜZELTİLEN KISIM: 'instance' kullanıldı ve path düzeltildi
+  updateTagValue: (data) => instance.post('/tags/update-value', data),
   deleteTag: (id) => instance.delete(`/tags/${id}`),
 
   // --- DASHBOARD PERSISTENCE ---
   getDashboard: (userId) => instance.get(`/dashboard/${userId}`),
   saveDashboard: (userId, layout) => instance.post('/dashboard/save', { userId, layout }),
 
-  // 📊 --- ANALYTICS & REPORTS (Yeni İstasyonumuz) ---
-  // Enerji tüketimi için saatlik delta farklarını getirir
-getEnergyDelta: (tagId, start, end) => 
-  instance.get('/reports/energy-delta', { 
-    params: { tagId, start, end } 
-  }),
+  // 📊 --- ANALYTICS & REPORTS ---
+  getEnergyDelta: (tagId, start, end) => 
+    instance.get('/reports/energy-delta', { 
+      params: { tagId, start, end } 
+    }),
   
-  // Belirli bir tarih aralığındaki ham verileri getirir
   getHistory: (tagId, start, end) => instance.get('/reports/history', { 
     params: { tagIds: tagId, start, end } 
   }),

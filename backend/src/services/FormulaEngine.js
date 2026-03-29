@@ -12,15 +12,16 @@ const FormulaEngine = {
 
 init: async () => {
     try {
-        const res = await pool.query("SELECT id, tag_name, formula FROM tags WHERE source_type = 'calculated'");
-        calculatedTags = res.rows;
+        // SELECT kısmına initial_value ekledik
+        const res = await pool.query("SELECT id, tag_name, formula, initial_value, source_type FROM tags WHERE connection_id IS NULL");
+        calculatedTags = res.rows.filter(t => t.source_type === 'calculated');
         
-        // 💡 KRİTİK LOG: Bunu terminalde görmelisin!
-        console.log("-----------------------------------------");
-        console.log("🧠 [FormulaEngine] YÜKLENEN TAGLER:");
-        calculatedTags.forEach(t => console.log(`> ID: ${t.id} | Name: ${t.tag_name} | Formula: ${t.formula}`));
-        console.log("-----------------------------------------");
-        
+        // 🧠 Cache'i veritabanındaki değerlerle doldur (Böylece 0 görünmez)
+        res.rows.forEach(t => {
+            tagCache[`T${t.id}`] = parseFloat(t.initial_value) || 0;
+        });
+
+        console.log("🧠 [FormulaEngine] Infrastructure Mapped & Cache Primed.");
     } catch (err) { console.error(err); }
 },
 
@@ -49,36 +50,41 @@ process: (incomingData) => {
         return results;
     },
 
-    calculate: (ctag) => {
-        try {
-            // 💡 ÇÖZÜM: Formülde olan ama henüz verisi gelmemiş tagleri 0 kabul et
-            // Yoksa mathjs "Undefined symbol" hatası verir.
-            const scope = { ...tagCache };
-            
-            // Formüldeki tüm T{id} yapılarını bul ve eksik olanları 0'la
-            const symbols = ctag.formula.match(/T\d+/g) || [];
-            symbols.forEach(sym => {
-                if (scope[sym] === undefined) scope[sym] = 0;
-            });
+calculate: (ctag) => {
+    try {
+      const scope = { ...tagCache };
+      const symbols = ctag.formula.match(/T\d+/g) || [];
+      symbols.forEach(sym => {
+          if (scope[sym] === undefined) scope[sym] = 0;
+      });
 
-            const result = math.evaluate(ctag.formula, scope);
-            
-            if (result !== undefined && !isNaN(result)) {
-                const finalValue = parseFloat(result.toFixed(2));
-                
-                // Dashboard yayını... (socket logic)
-                
-                // Cache'e yaz
-                tagCache[`T${ctag.id}`] = finalValue;
-                return { tagId: ctag.id, value: finalValue };
-            }
-        } catch (err) {
-            // 🚨 HATA LOGU: Burası neden 16'nın oluşmadığını söyleyecek
-            console.error(`❌ [FormulaEngine] HESAPLAMA HATASI (${ctag.tag_name}):`, err.message);
-            return null;
-        }
-        return null;
+      const result = math.evaluate(ctag.formula, scope);
+      
+      if (result !== undefined && !isNaN(result)) {
+          const finalValue = parseFloat(result.toFixed(2));
+          
+          // 🚀 [BURAYI GÜNCELLEDİK] Dashboard yayını buraya geliyor:
+          const io = socketManager.getIo();
+          if (io) {
+              io.emit('liveData', { 
+                  sourceName: 'VIRTUAL WORKSPACE', // Frontend'in beklediği isim
+                  tagName: ctag.tag_name, 
+                  tagId: ctag.id,
+                  value: finalValue 
+              });
+              // console.log(`🧠 [FormulaStream] Dashboard'a gönderildi: ${ctag.tag_name} -> ${finalValue}`);
+          }
+          
+          // Cache'e yaz
+          tagCache[`T${ctag.id}`] = finalValue;
+          return { tagId: ctag.id, value: finalValue };
+      }
+    } catch (err) {
+      console.error(`❌ [FormulaEngine] HESAPLAMA HATASI (${ctag.tag_name}):`, err.message);
+      return null;
     }
+    return null;
+}
 };
 
 module.exports = FormulaEngine;
