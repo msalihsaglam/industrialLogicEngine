@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+
 import { 
   PlusCircle, Save, Trash2, AlertTriangle, Zap, 
-  ArrowRightLeft, Edit3, XCircle, Layers, Plus, Target, Power, Database, Cpu, Info, Terminal, Settings2, ShieldAlert
+  ArrowRightLeft, Edit3, XCircle, Layers, Plus, Target, Power, Database, Cpu, Info, 
+  Terminal, Settings2, ShieldAlert, Activity // <--- BURAYA ACTIVITY EKLEDİK
 } from 'lucide-react';
+
 import { api } from '../services/api';
 
 const RuleManagement = ({ rules, connections, onRefresh, userId }) => {
