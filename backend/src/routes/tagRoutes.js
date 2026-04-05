@@ -5,14 +5,28 @@ const socketManager = require("../socket/socketManager");
 const FormulaEngine = require('../services/FormulaEngine');
 const LogicEngine = require('../services/logicEngine');
 
-// 1. Tagleri Getir (Fiziksel veya Sanal)
-// 🎯 GÜNCELLEME: initial_value alanı SELECT sorgusuna eklendi
+// 🚀 1. TÜM TAGLERİ GETİR (Eklenecek Kısım - EN ÜSTE ALINDI)
+// NOT: Bu rota parametrik olan /:connectionId rotasından ÖNCE gelmeli.
+router.get("/all", async (req, res) => {
+    try {
+        console.log("📡 [LogicEngine] Fetching all system tags for Energy Module...");
+        const result = await pool.query(
+            "SELECT id, connection_id, tag_name, node_id, unit, tag_role, initial_value FROM tags ORDER BY id ASC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error("🚨 SQL Error in /tags/all:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 🎯 2. Bağlantıya Göre Tagleri Getir (Fiziksel veya Sanal)
 router.get("/:connectionId", async (req, res) => {
     try {
         const { connectionId } = req.params;
         let result;
 
-        const selectFields = "id, connection_id, tag_name, node_id, unit, source_type, formula, is_historian, log_interval, deadband, initial_value";
+        const selectFields = "id, connection_id, tag_name, node_id, unit, source_type, formula, is_historian, log_interval, deadband, initial_value, tag_role";
 
         if (connectionId === "0" || connectionId === "null" || connectionId === null) {
             result = await pool.query(
@@ -24,48 +38,46 @@ router.get("/:connectionId", async (req, res) => {
                 [connectionId]
             );
         }
-        // Frontend'in beklediği saf Array formatı korunuyor
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 🚀 2. YENİ TAG EKLE (404 Hatasını Çözen ve Eksik Olan Rota)
+// 🚀 3. YENİ TAG EKLE
 router.post("/", async (req, res) => {
     const { 
         connection_id, tag_name, node_id, unit, 
         source_type, formula, is_historian, 
-        log_interval, deadband, value 
+        log_interval, deadband, value,
+        tag_role 
     } = req.body;
 
     try {
-        // connection_id "null" gelirse DB'ye gerçek NULL basıyoruz
         const finalConnId = (connection_id === "null" || !connection_id) ? null : connection_id;
 
         const result = await pool.query(
             `INSERT INTO tags (
                 connection_id, tag_name, node_id, unit, 
-                source_type, formula, is_historian, log_interval, deadband, initial_value
+                source_type, formula, is_historian, log_interval, deadband, initial_value, tag_role
             ) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
              RETURNING *`,
             [
                 finalConnId, tag_name, node_id || null, unit || '', 
                 source_type || 'opc_ua', formula || null,
                 is_historian || false, log_interval || 10, deadband || 0,
-                parseFloat(value) || 0
+                parseFloat(value) || 0,
+                tag_role || 'general'
             ]
         );
 
         const createdTag = result.rows[0];
 
-        // Sanal tag ise hesaplama motorunu tazele
         if (createdTag.source_type === 'calculated') {
             await FormulaEngine.reload();
         }
 
-        // Dashboard'a ilk veriyi fırlat
         const io = socketManager.getIo();
         if (io) {
             io.emit('liveData', { 
@@ -83,8 +95,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-// 3. Değer Güncelleme (Setpoint & Dashboard Update)
-// 🎯 GÜNCELLEME: İki kopya teke düşürüldü ve kapsamlı olan korundu
+// 4. Değer Güncelleme (Setpoint & Dashboard Update)
 router.post("/update-value", async (req, res) => {
     const { tagId, tagName, value, sourceName } = req.body;
     const io = socketManager.getIo();
@@ -92,7 +103,6 @@ router.post("/update-value", async (req, res) => {
     try {
         console.log(`📡 [Update Request] ID: ${tagId} | New Value: ${value}`);
 
-        // DB'deki kalıcı değeri (initial_value) güncelle
         const dbResult = await pool.query(
             "UPDATE tags SET initial_value = $1 WHERE id = $2 RETURNING *",
             [parseFloat(value), tagId]
@@ -102,7 +112,6 @@ router.post("/update-value", async (req, res) => {
             return res.status(404).json({ error: "Tag not found in DB" });
         }
 
-        // Dashboard'u anlık güncelle
         if (io) {
             io.emit('liveData', { 
                 sourceName: sourceName || 'SYSTEM', 
@@ -112,7 +121,6 @@ router.post("/update-value", async (req, res) => {
             });
         }
         
-        // Hesaplama ve Mantık Motorlarını tetikle
         FormulaEngine.process({ tagId, value });
         await LogicEngine.processData(sourceName || 'SYSTEM', tagName, tagId, value);
 
@@ -123,7 +131,7 @@ router.post("/update-value", async (req, res) => {
     }
 });
 
-// 4. Tag Silme
+// 5. Tag Silme
 router.delete("/:id", async (req, res) => {
     try {
         await pool.query("DELETE FROM tags WHERE id = $1", [req.params.id]);
@@ -134,13 +142,14 @@ router.delete("/:id", async (req, res) => {
     }
 });
 
-// 5. Tekil Tag Güncelleme (Historian & Sanal Tag Desteği)
+// 6. Tekil Tag Güncelleme
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { 
         tag_name, node_id, unit, 
         is_historian, log_interval, deadband,
-        source_type, formula 
+        source_type, formula,
+        tag_role 
     } = req.body;
 
     try {
@@ -153,8 +162,9 @@ router.put("/:id", async (req, res) => {
                 log_interval = $5, 
                 deadband = $6,
                 source_type = $7,
-                formula = $8
-            WHERE id = $9 
+                formula = $8,
+                tag_role = $9
+            WHERE id = $10 
             RETURNING *`;
         
         const values = [
@@ -166,6 +176,7 @@ router.put("/:id", async (req, res) => {
             parseFloat(deadband) || 0,
             source_type || 'opc_ua',
             formula || null,
+            tag_role || 'general',
             id
         ];
 

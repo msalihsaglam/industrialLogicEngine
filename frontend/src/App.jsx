@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { 
   ChevronRight, Activity, Menu, LayoutDashboard, PlusCircle, 
   Settings, Zap, LogOut, User, Users, Database, ChevronDown, Cpu, 
-  BarChart2, 
+  BarChart2, BatteryCharging, // 🔋 Enerji İkonu
   ShieldCheck as ShieldIcon, 
-  History as HistoryIcon // 🎯 Doğru Alias
+  History as HistoryIcon 
 } from 'lucide-react'; 
 import { socket, api } from './services/api';
 
@@ -18,6 +18,7 @@ import VirtualTags from './pages/VirtualTags';
 import HistorianSettings from './pages/HistorianSettings';
 import Reports from './pages/Reports';
 import Login from './pages/Login';
+import EnergyIntelligence from './pages/EnergyModule/EnergyIntelligence';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -25,14 +26,24 @@ function App() {
   const [rules, setRules] = useState([]);
   const [alarms, setAlarms] = useState([]); 
   const [connections, setConnections] = useState([]);
+  const [allTags, setAllTags] = useState([]); // 🎯 Enerji Modülü için Kritik: Tüm taglerin listesi
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [openSubMenu, setOpenSubMenu] = useState(null);
 
-  const refreshAllData = (userId) => {
+  // --- ⚙️ DATA SYNC ---
+  const refreshAllData = async (userId) => {
     if (!userId) return;
-    api.getRules(userId).then(res => setRules(res.data)).catch(err => console.error(err));
-    api.getConnections().then(res => setConnections(res.data)).catch(err => console.error(err));
+    try {
+      const [rulesRes, connRes, tagsRes] = await Promise.all([
+        api.getRules(userId),
+        api.getConnections(),
+        api.getAllTags() // 🎯 Backend'de tüm tagleri dönen bir endpoint olduğunu varsayıyoruz
+      ]);
+      setRules(rulesRes.data);
+      setConnections(connRes.data);
+      setAllTags(tagsRes.data || []);
+    } catch (err) { console.error("Sync Error:", err); }
   };
 
   useEffect(() => {
@@ -92,12 +103,15 @@ function App() {
     window.location.reload();
   };
 
-  if (!user) {
-    return <Login onLogin={handleLogin} />;
-  }
+  if (!user) { return <Login onLogin={handleLogin} />; }
 
+  // --- 🧭 NAVIGATION CONFIGURATION ---
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: ['admin', 'operator'] },
+    
+    // 🚀 ENERGY MODULE (Bağımsız Modül Olarak Eklendi)
+    { id: 'energy', label: 'Energy Module', icon: <BatteryCharging size={20} />, roles: ['admin', 'operator'] },
+    
     { id: 'incidents', label: 'Incidents', icon: <Zap size={20} />, roles: ['admin', 'operator'] },
     { 
       id: 'tag_mgmt', 
@@ -110,23 +124,15 @@ function App() {
       ]
     },
     { id: 'rules', label: 'Rule Management', icon: <PlusCircle size={20} />, roles: ['admin', 'operator'] },
-    { 
-      id: 'reports', 
-      label: 'Intelligence', 
-      icon: <BarChart2 size={20} />, 
-      roles: ['admin', 'operator'] 
-    },
-    { 
-      id: 'historian', 
-      label: 'Historian Hub', 
-      icon: <HistoryIcon size={20} />, // 🎯 KRİTİK DÜZELTME: HistoryIcon kullanıldı
-      roles: ['admin'] 
-    },
+    { id: 'reports', label: 'Intelligence', icon: <BarChart2 size={20} />, roles: ['admin', 'operator'] },
+    { id: 'historian', label: 'Historian Hub', icon: <HistoryIcon size={20} />, roles: ['admin'] },
     { id: 'users', label: 'User Management', icon: <Users size={20} />, roles: ['admin'] },
   ];
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
+      
+      {/* 🧭 SIDEBAR SECTION */}
       <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col fixed h-full z-50 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-6 flex items-center justify-between">
           {isSidebarOpen && <div className="flex items-center gap-2 font-black text-blue-400 tracking-wider italic text-lg"><Activity size={24} /> <span>LOGIC.IO</span></div>}
@@ -149,10 +155,12 @@ function App() {
                   }} 
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all relative group ${
                     activeTab === item.id || openSubMenu === item.id ? 'bg-blue-600/10 text-blue-400' : 'text-slate-400 hover:bg-slate-800'
-                  } ${activeTab === item.id && !item.children ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : ''}`}
+                  } ${activeTab === item.id && !item.children ? (item.id === 'energy' ? 'bg-amber-600 text-white' : 'bg-blue-600 text-white shadow-lg') : ''}`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="min-w-[20px]">{item.icon}</div>
+                    <div className={`min-w-[20px] ${activeTab === 'energy' && item.id === 'energy' ? 'text-white' : (item.id === 'energy' ? 'text-amber-500' : '')}`}>
+                        {item.icon}
+                    </div>
                     {isSidebarOpen && <span className="font-bold text-[11px] uppercase tracking-widest">{item.label}</span>}
                   </div>
                   {isSidebarOpen && item.children && (
@@ -173,8 +181,7 @@ function App() {
                           activeTab === child.id ? 'text-blue-400 bg-blue-400/5' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                         }`}
                       >
-                        {child.icon}
-                        {child.label}
+                        {child.icon} {child.label}
                       </button>
                     ))}
                   </div>
@@ -197,6 +204,7 @@ function App() {
         </div>
       </aside>
 
+      {/* 🏛️ MAIN CONTENT AREA */}
       <main className={`flex-1 flex flex-col h-screen transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <header className="h-16 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur-md">
             <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] italic opacity-60">
@@ -215,6 +223,10 @@ function App() {
 
         <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
           {activeTab === 'dashboard' && <Dashboard liveData={liveData} connections={connections} userId={user.id} />}
+          
+          {/* 🚀 ENERGY MODULE RENDERING (Kritik Ekleme) */}
+          {activeTab === 'energy' && <EnergyIntelligence liveData={liveData} connections={connections} allTags={allTags} />}
+          
           {activeTab === 'incidents' && <Incidents alarms={alarms} onClearAlarms={() => setAlarms([])} />}
           {activeTab === 'rules' && <RuleManagement rules={rules} connections={connections} onRefresh={() => refreshAllData(user.id)} userId={user.id} />}
           {activeTab === 'connections' && <ConnectionPage connections={connections} onRefresh={() => refreshAllData(user.id)} />}

@@ -27,6 +27,7 @@ export const api = {
   post: (url, data) => instance.post(url, data),
   put: (url, data) => instance.put(url, data),
   delete: (url) => instance.delete(url),
+  getAllTags: () => instance.get('/tags/all'),
 
   // --- BAĞLANTI (CONNECTION) ROTALARI ---
   getConnections: () => instance.get('/connections'),
@@ -44,8 +45,6 @@ export const api = {
   getTags: (connectionId) => instance.get(`/tags/${connectionId}`),
   addTag: (data) => instance.post('/tags', data),
   updateTag: (id, data) => instance.put(`/tags/${id}`, data),
-  
-  // ✅ DÜZELTİLEN KISIM: 'instance' kullanıldı ve path düzeltildi
   updateTagValue: (data) => instance.post('/tags/update-value', data),
   deleteTag: (id) => instance.delete(`/tags/${id}`),
 
