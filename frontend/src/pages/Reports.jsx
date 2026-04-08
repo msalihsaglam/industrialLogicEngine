@@ -3,13 +3,13 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { 
-  Loader2, Cpu, Database, TrendingUp, Clock, Info, LineChart as ChartIcon, 
-  ShieldCheck, Calendar, Activity, ArrowDown, ArrowUp
+  Loader2, Database, TrendingUp, Clock, Info, LineChart as ChartIcon, 
+  Calendar, Activity, ArrowDown, ArrowUp
 } from 'lucide-react';
 import { api } from '../services/api';
 
 const Reports = ({ userId }) => {
-  // --- 🔒 CORE STATE ---
+  // --- 🔒 CORE STATE (FULLY PRESERVED) ---
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]); 
@@ -17,11 +17,11 @@ const Reports = ({ userId }) => {
   const [selectedTag, setSelectedTag] = useState(""); 
 
   const [dateRange, setDateRange] = useState({ 
-    start: new Date(new Date().setHours(new Date().getHours() - 24)).toISOString().slice(0, 16), // Son 24 saat
+    start: new Date(new Date().setHours(new Date().getHours() - 24)).toISOString().slice(0, 16),
     end: new Date().toISOString().slice(0, 16) 
   });
 
-  // --- ⚙️ UNIFIED INFRASTRUCTURE SYNC ---
+  // --- ⚙️ INFRASTRUCTURE SYNC (PRESERVED) ---
   useEffect(() => {
     const loadInfrastructure = async () => {
       try {
@@ -37,7 +37,7 @@ const Reports = ({ userId }) => {
         
         const virtualRes = await api.getTags(0);
         const virtualTags = virtualRes.data.map(t => ({ 
-          ...t, sourceName: 'VIRTUAL WORKSPACE', type: 'virtual' 
+          ...t, sourceName: 'VIRTUAL', type: 'virtual' 
         }));
 
         setAllSystemTags([...physicalTags, ...virtualTags]);
@@ -74,35 +74,46 @@ const Reports = ({ userId }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-6 pt-10 text-white animate-in fade-in duration-700 font-['Inter',_sans-serif]">
+    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
       
+      {/* 🔡 INDUSTRIAL CORE STYLES */}
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
+          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
+          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 12px 16px; border-radius: 4px; font-weight: 600; outline: none; color: #fff; }
+          .input-field:focus { border-color: #3b82f6; }
+        `}
+      </style>
+
       {/* 🏛️ HEADER SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b-2 border-slate-800 pb-12">
-        <div className="space-y-1 min-w-[380px]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-10 h-1 bg-blue-500"></div>
-            <span className="text-blue-400 text-[10px] font-bold uppercase tracking-[0.4em]">Data Historian</span>
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[#23333A] pb-10">
+        <div className="space-y-4 min-w-[380px]">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-blue-500"></div>
+            <span className="label-caps">Data Historian Engine</span>
           </div>
-          <h1 className="text-5xl font-black tracking-tighter uppercase italic leading-none">Historian</h1>
-          <p className="text-slate-500 text-[12px] font-semibold tracking-wide flex items-center gap-2 mt-4 italic">
+          <h1 className="text-4xl font-bold tracking-tight uppercase text-white leading-none">Historian</h1>
+          <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748B] uppercase tracking-widest">
              <Clock size={14} className="text-blue-500" /> Granular Time-Series Analysis
-          </p>
+          </div>
         </div>
 
-        {/* 🎯 ANALYTICAL INSIGHTS GUIDE */}
-        <div className="flex-1 bg-slate-900/40 border-2 border-slate-800/50 p-6 rounded-[2.5rem] relative overflow-hidden flex flex-col md:flex-row gap-6 shadow-2xl">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><ChartIcon size={80}/></div>
-            <div className="p-4 bg-blue-600/10 text-blue-400 rounded-2xl h-fit shadow-inner border border-blue-600/20"><Info size={24}/></div>
+        {/* 🎯 ANALYTICAL INSIGHTS GUIDE (Sert & Net) */}
+        <div className="flex-1 industrial-panel p-6 rounded-md relative overflow-hidden flex flex-col md:flex-row gap-6 border-l-4 border-l-blue-600 shadow-sm">
+            <div className="p-3 bg-blue-600/10 text-blue-400 rounded h-fit"><Info size={20}/></div>
             <div className="space-y-4">
-                <h5 className="text-[11px] font-bold text-white uppercase italic tracking-widest border-b border-slate-800 pb-2 inline-block">Historical Intelligence Guide</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[9px] font-semibold uppercase text-slate-500">
+                <h5 className="label-caps border-b border-[#23333A] pb-2 inline-block">Historical Intelligence Protocol</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-1">
-                        <p className="text-blue-400 font-bold italic text-[10px]">Node Analysis</p>
-                        <p>Analyze behavior across Physical sensors and Virtual logic nodes.</p>
+                        <p className="text-blue-400 text-[10px] font-bold uppercase tracking-tighter">Node Analysis</p>
+                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Compare behavior across physical sensors and virtual logic variables.</p>
                     </div>
-                    <div className="space-y-1 border-l border-slate-800/50 pl-4">
-                        <p className="text-purple-400 font-bold italic text-[10px]">Trend Projection</p>
-                        <p>Identify long-term patterns and operational drifts in your infrastructure.</p>
+                    <div className="space-y-1 border-l border-[#23333A] pl-4">
+                        <p className="text-purple-400 text-[10px] font-bold uppercase tracking-tighter">Trend Projection</p>
+                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Identify long-term patterns and operational drifts in infrastructure.</p>
                     </div>
                 </div>
             </div>
@@ -110,49 +121,43 @@ const Reports = ({ userId }) => {
       </div>
 
       {/* 📊 CONTROL CONSOLE */}
-      <div className="bg-[#0b1117] border-2 border-slate-800 p-10 rounded-[4rem] shadow-2xl flex flex-col xl:flex-row gap-8 items-end relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-2 h-full bg-blue-600 transition-colors duration-500" />
+      <div className="bg-[#0B1215] border border-[#23333A] p-8 rounded-md shadow-inner flex flex-col xl:flex-row gap-6 items-end relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1 h-full bg-blue-600" />
         
-        <div className="flex-1 w-full space-y-3">
-          <label className="text-[10px] text-slate-600 uppercase font-bold ml-2 tracking-widest italic flex items-center gap-2">
-            <Database size={12}/> Target Infrastructure Node
-          </label>
-          <div className="relative">
-            <select 
-              className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-white text-[12px] font-semibold outline-none focus:border-blue-500 appearance-none shadow-2xl uppercase tracking-tight cursor-pointer"
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-            >
-              <option value="">SELECT TAG TO ANALYZE...</option>
-              {allSystemTags.map(tag => (
-                <option key={tag.id} value={tag.id} className="bg-slate-900 font-sans">
-                  {tag.type === 'virtual' ? '🧠' : '📍'} {tag.tag_name.toUpperCase()} — [{tag.sourceName}]
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex-1 w-full space-y-2">
+          <label className="label-caps opacity-50 ml-1">Target Infrastructure Node</label>
+          <select 
+            className="w-full input-field text-[11px] uppercase tracking-wider cursor-pointer"
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+          >
+            <option value="">SELECT TAG TO ANALYZE...</option>
+            {allSystemTags.map(tag => (
+              <option key={tag.id} value={tag.id} className="bg-[#141F24]">
+                {tag.type === 'virtual' ? 'CORE' : 'FIELD'} // {tag.tag_name.toUpperCase()} — [{tag.sourceName}]
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* 🕒 TIME SELECTION */}
-        <div className="w-full xl:w-fit space-y-3">
-          <label className="text-[10px] text-slate-600 uppercase font-bold ml-2 tracking-widest italic flex items-center gap-2">
-            <Calendar size={12}/> Analysis Timeframe
-          </label>
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full xl:w-fit space-y-2">
+          <label className="label-caps opacity-50 ml-1">Analysis Timeframe</label>
+          <div className="flex flex-col md:flex-row gap-2">
             <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-blue-500 opacity-40 z-10 italic pointer-events-none">FROM</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-blue-500/50 z-10 pointer-events-none">FROM</span>
               <input 
                 type="datetime-local" 
-                className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 pl-14 text-white text-[13px] font-bold outline-none focus:border-blue-500 shadow-inner w-full md:w-64 [color-scheme:dark]" 
+                className="input-field pl-12 text-[11px] w-full md:w-56 [color-scheme:dark]" 
                 value={dateRange.start} 
                 onChange={e => setDateRange({...dateRange, start: e.target.value})} 
               />
             </div>
             <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-black text-blue-500 opacity-40 z-10 italic pointer-events-none">TO</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-blue-500/50 z-10 pointer-events-none">TO</span>
               <input 
                 type="datetime-local" 
-                className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 pl-12 text-white text-[13px] font-bold outline-none focus:border-blue-500 shadow-inner w-full md:w-64 [color-scheme:dark]" 
+                className="input-field pl-10 text-[11px] w-full md:w-56 [color-scheme:dark]" 
                 value={dateRange.end} 
                 onChange={e => setDateRange({...dateRange, end: e.target.value})} 
               />
@@ -163,80 +168,78 @@ const Reports = ({ userId }) => {
         <button 
           onClick={generateReport} 
           disabled={loading || !selectedTag} 
-          className="w-full xl:w-64 h-[66px] rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase text-[11px] tracking-widest transition-all shadow-2xl flex items-center justify-center gap-4 disabled:opacity-30 active:scale-95"
+          className="w-full xl:w-48 py-3.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-20 active:scale-95"
         >
-          {loading ? <Loader2 size={20} className="animate-spin"/> : <Activity size={20}/>} 
+          {loading ? <Loader2 size={16} className="animate-spin"/> : <Activity size={16}/>} 
           {loading ? 'ANALYZING...' : 'RUN HISTORY'}
         </button>
       </div>
 
       {/* 📈 ANALYTICS ENGINE OUTPUT */}
       {reportData.length > 0 && (
-        <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-1000">
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           
-          {/* STATS CARDS */}
+          {/* STATS CARDS (Tabular Numbers) */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-[#0b1117] border-2 border-slate-800 p-10 rounded-[3rem] flex items-center gap-8 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><ArrowUp size={80}/></div>
-                <div className="p-5 bg-rose-500/10 text-rose-500 rounded-2xl shadow-inner border border-rose-500/20"><TrendingUp size={32}/></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-rose-600">
+                <div className="p-3 bg-rose-500/5 text-rose-500 rounded"><TrendingUp size={24}/></div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest italic mb-2">Maximum Value</p>
-                  <h4 className="text-5xl font-bold text-white tracking-tighter italic">{stats.max}</h4>
+                  <p className="label-caps !text-[8px] mb-1">Maximum Recorded</p>
+                  <h4 className="text-3xl font-bold font-data text-white">{stats.max}</h4>
                 </div>
               </div>
-              <div className="bg-[#0b1117] border-2 border-slate-800 p-10 rounded-[3rem] flex items-center gap-8 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><Activity size={80}/></div>
-                <div className="p-5 bg-blue-500/10 text-blue-500 rounded-2xl shadow-inner border border-blue-500/20"><Activity size={32}/></div>
+              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-blue-600">
+                <div className="p-3 bg-blue-500/5 text-blue-500 rounded"><Activity size={24}/></div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest italic mb-2">Average Trend</p>
-                  <h4 className="text-5xl font-bold text-white tracking-tighter italic">{stats.avg}</h4>
+                  <p className="label-caps !text-[8px] mb-1">Mean Average</p>
+                  <h4 className="text-3xl font-bold font-data text-white">{stats.avg}</h4>
                 </div>
               </div>
-              <div className="bg-[#0b1117] border-2 border-slate-800 p-10 rounded-[3rem] flex items-center gap-8 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><ArrowDown size={80}/></div>
-                <div className="p-5 bg-emerald-500/10 text-emerald-500 rounded-2xl shadow-inner border border-emerald-500/20"><ArrowDown size={32}/></div>
+              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-emerald-600">
+                <div className="p-3 bg-emerald-500/5 text-emerald-500 rounded"><ArrowDown size={24}/></div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest italic mb-2">Minimum Value</p>
-                  <h4 className="text-5xl font-bold text-white tracking-tighter italic">{stats.min}</h4>
+                  <p className="label-caps !text-[8px] mb-1">Minimum Recorded</p>
+                  <h4 className="text-3xl font-bold font-data text-white">{stats.min}</h4>
                 </div>
               </div>
             </div>
           )}
 
-          {/* MAIN CHART */}
-          <div className="bg-[#0b1117] border-2 border-slate-800 p-12 rounded-[5rem] shadow-inner h-[600px] relative">
-            <div className="absolute top-8 left-12 flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 italic">Temporal Waveform Reconstruction // High-Precision</span>
+          {/* MAIN CHART CONTAINER */}
+          <div className="bg-[#0B1215] border border-[#23333A] p-10 rounded-md shadow-inner h-[550px] relative overflow-hidden">
+            <div className="absolute top-6 left-10 flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3B82F6]"></div>
+                <span className="label-caps !text-[8px] opacity-40">Temporal Waveform Reconstruction // 1:1 Precision</span>
             </div>
             
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={reportData} margin={{ top: 40, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="10 10" stroke="#1e293b" vertical={false} opacity={0.3} />
+                  <CartesianGrid strokeDasharray="0" stroke="#1E293B" vertical={false} opacity={0.2} />
                   <XAxis 
                     dataKey="ts" 
                     stroke="#475569" 
-                    fontSize={11} 
+                    fontSize={10} 
                     fontWeight="700" 
                     tickLine={false} 
                     axisLine={false} 
                     dy={15} 
                     tickFormatter={(t) => new Date(t).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})} 
                   />
-                  <YAxis stroke="#475569" fontSize={11} fontWeight="700" tickLine={false} axisLine={false} dx={-15} />
+                  <YAxis stroke="#475569" fontSize={10} fontWeight="700" tickLine={false} axisLine={false} dx={-10} />
                   <Tooltip 
-                    contentStyle={{backgroundColor: '#020617', border: '2px solid #1e293b', borderRadius: '24px', fontSize: '12px', fontWeight: '600', color: '#fff'}}
-                    labelFormatter={(label) => new Date(label).toLocaleString()}
+                    contentStyle={{backgroundColor: '#141F24', border: '1px solid #23333A', borderRadius: '4px', fontSize: '11px', color: '#fff'}}
+                    itemStyle={{fontWeight: 'bold', textTransform: 'uppercase'}}
+                    labelFormatter={(label) => new Date(label).toLocaleString('tr-TR')}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="val" 
                     stroke="#3b82f6" 
-                    strokeWidth={4} 
+                    strokeWidth={2.5} 
                     dot={false} 
-                    activeDot={{ r: 8, strokeWidth: 0, fill: '#fff' }} 
-                    animationDuration={1500}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }} 
+                    animationDuration={1000}
                   />
                 </LineChart>
             </ResponsiveContainer>
