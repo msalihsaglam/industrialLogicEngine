@@ -2,11 +2,21 @@ import React from 'react';
 import { 
   Activity, Menu, LayoutDashboard, PlusCircle, 
   Settings, ShieldAlert, Database, BarChart2, 
-  ShieldCheck, Cpu, Sliders, LogOut, Zap, Globe
+  ShieldCheck, Cpu, Sliders, LogOut, Zap, Globe,
+  Sun, Moon, User // <-- Sun, Moon ve User eklendi
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, handleLogout }) => {
+const Sidebar = ({ 
+  isOpen, 
+  toggle, 
+  activeTab, 
+  setActiveTab, 
+  alarmCount = 0, 
+  handleLogout,
+  currentTheme, // <-- Yeni prop
+  toggleTheme   // <-- Yeni prop
+}) => {
   const { t } = useTranslation();
 
   // --- 🧭 NAVIGATION CONFIGURATION ---
@@ -36,9 +46,9 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
   ];
 
   return (
-    <aside className={`bg-[var(--ind-bg)] border-r border-[var(--ind-border)] transition-all duration-300 flex flex-col fixed h-screen z-[1000] shadow-2xl font-sans ${isOpen ? 'w-72' : 'w-20'}`}>
+    <aside className={`bg-[var(--ind-panel)] border-r border-[var(--ind-border)] transition-all duration-300 flex flex-col fixed h-screen z-[1000] shadow-2xl font-sans ${isOpen ? 'w-72' : 'w-20'}`}>
       
-      {/* 🏛️ LOGO SECTION (Sert & Dik) */}
+      {/* 🏛️ LOGO SECTION */}
       <div className="p-6 h-24 flex items-center justify-between border-b border-[var(--ind-border)]">
         {isOpen && (
           <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
@@ -46,8 +56,8 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
               <Activity size={20} className="animate-pulse" />
             </div>
             <div className="flex flex-col">
-                <span className="text-xl font-black text-white tracking-tighter leading-none">LOGIC.IO</span>
-                <span className="text-[8px] font-bold text-[var(--ind-petroleum)] tracking-[0.4em] uppercase mt-1">Industrial Core</span>
+                <span className="text-xl font-black text-[var(--ind-text)] tracking-tighter leading-none">LOGIC.IO</span>
+                <span className="ind-label !text-[8px] !text-[var(--ind-petroleum)] tracking-[0.4em] uppercase mt-1">Industrial Core</span>
             </div>
           </div>
         )}
@@ -59,7 +69,7 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
         </button>
       </div>
 
-      {/* 🧭 MAIN NAVIGATION (Scrollable) */}
+      {/* 🧭 MAIN NAVIGATION */}
       <nav className="flex-1 px-3 space-y-1.5 mt-8 overflow-y-auto scrollbar-hide">
         {mainItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -72,10 +82,9 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
               className={`w-full flex items-center p-3.5 rounded-[var(--ind-radius)] transition-all duration-200 relative group overflow-hidden border ${
                 isActive 
                 ? (isEnergy ? 'bg-[var(--ind-amber)]/10 text-[var(--ind-amber)] border-[var(--ind-amber)]/20' : 'bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] border-[var(--ind-petroleum)]/30') 
-                : 'text-slate-500 border-transparent hover:bg-[var(--ind-panel)] hover:text-white'
+                : 'text-slate-500 border-transparent hover:bg-[var(--ind-bg)] hover:text-[var(--ind-text)]'
               }`}
             >
-              {/* Active Indicator Bar */}
               {isActive && (
                 <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full ${isEnergy ? 'bg-[var(--ind-amber)]' : 'bg-[var(--ind-cyan)]'}`} />
               )}
@@ -86,7 +95,7 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
 
               {isOpen && (
                 <div className="ml-4 flex-1 flex justify-between items-center overflow-hidden animate-in fade-in slide-in-from-left-1">
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : ''}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-[var(--ind-text)]' : ''}`}>
                     {item.label}
                   </span>
                   {item.badge && (
@@ -101,82 +110,95 @@ const Sidebar = ({ isOpen, toggle, activeTab, setActiveTab, alarmCount = 0, hand
         })}
       </nav>
 
-{/* ⚙️ BOTTOM SECTION: USER PROFILE & SESSION MANAGEMENT */}
-<div className="p-3 bg-[var(--ind-panel)]/40 border-t border-[var(--ind-border)] space-y-1">
-  
-  {/* 👤 AUTHORIZED OPERATIVE (User Section) */}
-  <div className={`flex items-center p-3 mb-2 rounded-[var(--ind-radius)] bg-[var(--ind-bg)] border border-[var(--ind-border)] group transition-all ${!isOpen ? 'justify-center' : 'gap-4'}`}>
-    {/* User Icon / Avatar (Sert Köşeli Badge Stili) */}
-    <div className="min-w-[36px] h-9 bg-[var(--ind-petroleum)]/20 border border-[var(--ind-petroleum)]/40 rounded flex items-center justify-center text-[var(--ind-cyan)] shadow-inner group-hover:border-[var(--ind-cyan)]/30 transition-all">
-      <User size={20} strokeWidth={2.5} />
-    </div>
-
-    {isOpen && (
-      <div className="flex flex-col overflow-hidden animate-in fade-in slide-in-from-left-1 duration-300">
-        <span className="ind-label !text-[8px] !text-[var(--ind-petroleum)] mb-0.5 opacity-80">Authorized Op.</span>
-        <span className="text-[11px] font-extrabold text-white uppercase tracking-tight leading-none truncate">
-          {/* Buraya props'tan gelen kullanıcı adı gelecek */}
-          S. DEMİRCİ
-        </span>
-        <span className="ind-data text-[8px] text-[var(--ind-slate)] mt-1 opacity-50 uppercase tracking-tighter">
-          ID: #0412-NODE
-        </span>
-      </div>
-    )}
-  </div>
-
-  {/* 🛠️ ADMIN ITEMS (GLOBAL CONFIG & ACCESS CONTROL) */}
-  {adminItems.map((item) => {
-    const isActive = activeTab === item.id;
-    return (
-      <button 
-        key={item.id}
-        onClick={() => setActiveTab(item.id)}
-        className={`w-full flex items-center p-3.5 rounded-[var(--ind-radius)] transition-all group border ${
-          isActive 
-          ? 'bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] border-[var(--ind-petroleum)]/20' 
-          : 'text-slate-600 border-transparent hover:text-white hover:bg-[var(--ind-panel)]'
-        }`}
-      >
-        <div className={`min-w-[20px] flex justify-center ${isActive ? 'text-[var(--ind-cyan)]' : 'group-hover:rotate-90 transition-transform duration-500'}`}>
-          {item.icon}
-        </div>
-        {isOpen && (
-          <span className="ml-4 text-[10px] font-bold uppercase tracking-widest">
-            {item.label}
-          </span>
-        )}
-      </button>
-    );
-  })}
-
-  {/* ⚠️ TERMINATE SESSION (Kill-Switch Stili) */}
-  <button 
-    onClick={handleLogout}
-    className="w-full flex items-center p-3.5 rounded-[var(--ind-radius)] text-slate-600 hover:text-[var(--ind-red)] hover:bg-[var(--ind-red)]/5 transition-all mt-3 group border border-transparent hover:border-[var(--ind-red)]/20"
-  >
-    <div className="min-w-[20px] flex justify-center group-hover:scale-110 transition-transform">
-      <LogOut size={18} strokeWidth={2.5} />
-    </div>
-    {isOpen && (
-      <div className="ml-4 flex flex-col items-start leading-none">
-        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Terminate</span>
-        <span className="text-[7px] font-bold text-slate-700 uppercase mt-1 tracking-tighter group-hover:text-[var(--ind-red)]/50">End Secure Session</span>
-      </div>
-    )}
-  </button>
-
-  {/* SYSTEM STATUS FOOTER (V3.2 // SECURE_CORE) */}
-  <div className={`flex items-center gap-3 px-3 py-4 mt-2 border-t border-[var(--ind-border)]/50 ${!isOpen && 'justify-center'}`}>
-      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-      {isOpen && (
-          <div className="flex flex-col leading-none">
-              <span className="text-[9px] font-bold text-white uppercase tracking-tight">Core Online</span>
-              <span className="ind-data text-[7px] text-[var(--ind-slate)] uppercase tracking-[0.2em] mt-1">V3.2.0 // STABLE</span>
+      {/* ⚙️ BOTTOM SECTION */}
+      <div className="p-3 bg-[var(--ind-header)]/30 border-t border-[var(--ind-border)] space-y-1">
+        
+        {/* 🌓 THEME SWITCHER (Gündüz/Gece Anahtarı) */}
+        <button 
+          onClick={toggleTheme}
+          className="w-full flex items-center p-3.5 rounded-[var(--ind-radius)] text-slate-600 hover:text-[var(--ind-cyan)] hover:bg-[var(--ind-panel)] transition-all group border border-transparent"
+        >
+          <div className="min-w-[20px] flex justify-center group-hover:rotate-12 transition-transform duration-500">
+            {currentTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </div>
-      )}
-  </div>
-</div>
+          {isOpen && (
+            <span className="ml-4 text-[10px] font-bold uppercase tracking-widest">
+              {currentTheme === 'dark' ? 'Light Operation' : 'Dark Operation'}
+            </span>
+          )}
+        </button>
+
+        {/* 👤 AUTHORIZED OPERATIVE */}
+        <div className={`flex items-center p-3 mb-2 rounded-[var(--ind-radius)] bg-[var(--ind-bg)] border border-[var(--ind-border)] group transition-all ${!isOpen ? 'justify-center' : 'gap-4'}`}>
+          <div className="min-w-[36px] h-9 bg-[var(--ind-petroleum)]/20 border border-[var(--ind-petroleum)]/40 rounded flex items-center justify-center text-[var(--ind-cyan)] shadow-inner group-hover:border-[var(--ind-cyan)]/30 transition-all">
+            <User size={20} strokeWidth={2.5} />
+          </div>
+
+          {isOpen && (
+            <div className="flex flex-col overflow-hidden animate-in fade-in slide-in-from-left-1 duration-300">
+              <span className="ind-label !text-[8px] !text-[var(--ind-petroleum)] mb-0.5 opacity-80">Authorized Op.</span>
+              <span className="text-[11px] font-extrabold text-[var(--ind-text)] uppercase tracking-tight leading-none truncate">
+                S. DEMİRCİ
+              </span>
+              <span className="ind-data text-[8px] text-[var(--ind-slate)] mt-1 opacity-50 uppercase tracking-tighter">
+                ID: #0412-NODE
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 🛠️ ADMIN ITEMS */}
+        {adminItems.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button 
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center p-3.5 rounded-[var(--ind-radius)] transition-all group border ${
+                isActive 
+                ? 'bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] border-[var(--ind-petroleum)]/20' 
+                : 'text-slate-600 border-transparent hover:text-[var(--ind-text)] hover:bg-[var(--ind-panel)]'
+              }`}
+            >
+              <div className={`min-w-[20px] flex justify-center ${isActive ? 'text-[var(--ind-cyan)]' : 'group-hover:rotate-90 transition-transform duration-500'}`}>
+                {item.icon}
+              </div>
+              {isOpen && (
+                <span className="ml-4 text-[10px] font-bold uppercase tracking-widest">
+                  {item.label}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* ⚠️ TERMINATE SESSION */}
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center p-3.5 rounded-[var(--ind-radius)] text-slate-600 hover:text-[var(--ind-red)] hover:bg-[var(--ind-red)]/5 transition-all mt-3 group border border-transparent hover:border-[var(--ind-red)]/20"
+        >
+          <div className="min-w-[20px] flex justify-center group-hover:scale-110 transition-transform">
+            <LogOut size={18} strokeWidth={2.5} />
+          </div>
+          {isOpen && (
+            <div className="ml-4 flex flex-col items-start leading-none">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Terminate</span>
+              <span className="text-[7px] font-bold text-slate-700 uppercase mt-1 tracking-tighter group-hover:text-[var(--ind-red)]/50">End Secure Session</span>
+            </div>
+          )}
+        </button>
+
+        {/* SYSTEM STATUS FOOTER */}
+        <div className={`flex items-center gap-3 px-3 py-4 mt-2 border-t border-[var(--ind-border)]/50 ${!isOpen && 'justify-center'}`}>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+            {isOpen && (
+                <div className="flex flex-col leading-none">
+                    <span className="text-[9px] font-bold text-[var(--ind-text)] uppercase tracking-tight">Core Online</span>
+                    <span className="ind-data text-[7px] text-[var(--ind-slate)] uppercase tracking-[0.2em] mt-1">V3.2.0 // STABLE</span>
+                </div>
+            )}
+        </div>
+      </div>
     </aside>
   );
 };
