@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, Shield, Trash2, Lock, Info, 
-  ShieldCheck, Fingerprint, Users, Key, X
+  ShieldCheck, Fingerprint, Users, Key, X 
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 const UserManagement = () => {
+  const { t } = useTranslation();
+
   // --- 🔒 CORE STATE (FULLY PRESERVED) ---
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'operator' });
@@ -39,50 +42,38 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10 font-sans">
       
-      {/* 🔡 INDUSTRIAL CORE STYLES */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 12px 16px; border-radius: 4px; font-weight: 600; outline: none; color: #fff; }
-          .table-header { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; background-color: #1C262B; }
-        `}
-      </style>
-
       {/* 🏛️ HEADER & GUIDE SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[#23333A] pb-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[var(--ind-border)] pb-10">
         <div className="space-y-4 min-w-[350px]">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-[#00FFCC]"></div>
-            <span className="label-caps">Identity & Access Management</span>
+            <div className="w-1.5 h-6 bg-[var(--ind-cyan)]"></div>
+            <span className="ind-label">Identity & Access Management</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight uppercase text-white leading-none">Access Control</h1>
-          <div className="mt-6 inline-flex items-center gap-2 bg-[#141F24] px-4 py-2 border border-[#23333A] rounded text-[10px] font-bold text-[#00FFCC] uppercase tracking-widest">
+          <h1 className="ind-title">Access Control</h1>
+          <div className="mt-6 inline-flex items-center gap-3 bg-[var(--ind-panel)] px-4 py-2 border border-[var(--ind-border)] rounded-[var(--ind-radius)] ind-label !text-[var(--ind-cyan)] shadow-inner">
             <Shield size={14} /> {users.length} Authorized Operatives
           </div>
         </div>
 
         {/* 🎯 RIGHT: SECURITY GUIDE */}
-        <div className="flex-1 industrial-panel p-6 rounded-md relative overflow-hidden flex flex-col md:flex-row gap-6 border-l-4 border-l-[#006470] shadow-sm">
-            <div className="p-3 bg-[#006470]/10 text-[#00FFCC] rounded h-fit"><Info size={20}/></div>
+        <div className="flex-1 ind-panel p-6 border-l-4 border-l-[var(--ind-petroleum)] relative overflow-hidden flex flex-col md:flex-row gap-8">
+            <div className="p-3 bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] rounded h-fit"><Info size={24}/></div>
             <div className="space-y-4">
-                <h5 className="label-caps border-b border-[#23333A] pb-2 inline-block">Security Provisioning Protocol</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <h5 className="ind-label border-b border-[var(--ind-border)] pb-2 inline-block">Security Provisioning Protocol</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-1">
-                        <p className="text-[#00FFCC] text-[10px] font-bold uppercase tracking-tighter">Role Hierarchy</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Admins manage core infrastructure; Operators manage visualization.</p>
+                        <p className="ind-label !text-[var(--ind-cyan)]">Role Hierarchy</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Admins manage infrastructure; Operators manage data.</p>
                     </div>
-                    <div className="space-y-1 border-l border-[#23333A] pl-4">
-                        <p className="text-amber-500 text-[10px] font-bold uppercase tracking-tighter">Credentials</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Passwords must be rotated immediately upon first system entry.</p>
+                    <div className="space-y-1 border-l border-[var(--ind-border)] pl-4">
+                        <p className="ind-label !text-[var(--ind-amber)]">Credentials</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Rotate passwords upon initial system entry.</p>
                     </div>
-                    <div className="space-y-1 border-l border-[#23333A] pl-4">
-                        <p className="text-blue-400 text-[10px] font-bold uppercase tracking-tighter">Audit Trail</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">All provisioned accounts are logged for compliance and traceability.</p>
+                    <div className="space-y-1 border-l border-[var(--ind-border)] pl-4">
+                        <p className="ind-label !text-blue-400">Audit Trail</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">All accounts are logged for compliance.</p>
                     </div>
                 </div>
             </div>
@@ -90,89 +81,91 @@ const UserManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+        
         {/* 🛠️ PROVISION FORM (Security Console) */}
-        <div className="industrial-panel p-8 rounded-md shadow-sm h-fit relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-[#006470]" />
+        <div className="ind-panel p-10 bg-[var(--ind-panel)]/40 relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--ind-petroleum)] shadow-[0_0_15px_rgba(0,100,112,0.5)]" />
           
-          <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-8 flex items-center gap-3">
-            <UserPlus size={20} className="text-[#00FFCC]" /> Provision Operative
+          <h3 className="ind-subtitle !text-xl !text-white mb-10 flex items-center gap-4">
+            <UserPlus size={22} className="text-[var(--ind-cyan)]" /> Provision Operative
           </h3>
           
-          <form onSubmit={handleAddUser} className="space-y-6">
-            <div className="space-y-2">
-                <label className="label-caps opacity-50">Operator Username</label>
+          <form onSubmit={handleAddUser} className="space-y-8">
+            <div className="space-y-3">
+                <label className="ind-label opacity-50 ml-1">Operator Username</label>
                 <div className="relative">
-                    <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                    <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ind-petroleum)]" />
                     <input 
                       type="text" placeholder="E.G. STATION_OPERATOR_A" 
-                      className="w-full input-field pl-12 text-xs font-bold uppercase tracking-widest"
+                      className="w-full ind-input !pl-12 !font-black !tracking-widest"
                       value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})}
                     />
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <label className="label-caps opacity-50">Access Credentials</label>
+            <div className="space-y-3">
+                <label className="ind-label opacity-50 ml-1">Access Credentials</label>
                 <div className="relative">
-                    <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                    <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ind-petroleum)]" />
                     <input 
                       type="password" placeholder="••••••••" 
-                      className="w-full input-field pl-12 text-xs font-bold"
+                      className="w-full ind-input !pl-12 !font-black !tracking-widest"
                       value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})}
                     />
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <label className="label-caps opacity-50">Security Role</label>
+            <div className="space-y-3">
+                <label className="ind-label opacity-50 ml-1">Security Role</label>
                 <select 
-                    className="w-full input-field text-xs font-bold uppercase tracking-widest appearance-none cursor-pointer"
+                    className="w-full ind-input cursor-pointer"
                     value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}
                 >
-                    <option value="operator" className="bg-[#141F24]">Standard Operative</option>
-                    <option value="admin" className="bg-[#141F24] text-amber-500">System Administrator</option>
+                    <option value="operator" className="bg-slate-900">Standard Operative</option>
+                    <option value="admin" className="bg-slate-900 text-[var(--ind-amber)]">System Administrator</option>
                 </select>
             </div>
 
-            <button className="w-full bg-[#006470] hover:bg-[#007a8a] text-white font-bold py-4 rounded shadow-lg text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
-              <ShieldCheck size={18} /> Authorize Access
+            <button className="ind-btn-primary w-full !py-5 shadow-xl flex items-center justify-center gap-3">
+              <ShieldCheck size={20} /> Authorize Access
             </button>
           </form>
         </div>
 
         {/* 📋 OPERATIVE LIST (Security Audit Grid) */}
-        <div className="xl:col-span-2 industrial-panel rounded-md overflow-hidden shadow-sm">
+        <div className="xl:col-span-2 ind-panel !p-0 overflow-hidden shadow-2xl">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="table-header">
-                <th className="px-8 py-5">System Operative</th>
-                <th className="px-8 py-5 text-center">Authorization Level</th>
-                <th className="px-8 py-5 text-right pr-10">Security Action</th>
+              <tr className="bg-[var(--ind-header)] border-b border-[var(--ind-border)]">
+                <th className="px-10 py-6 ind-label !text-slate-600">System Operative</th>
+                <th className="px-10 py-6 ind-label !text-slate-600 text-center">Auth Level</th>
+                <th className="px-10 py-6 ind-label !text-slate-600 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#23333A]">
+            <tbody className="divide-y divide-[var(--ind-border)]">
               {users.map(u => (
-                <tr key={u.id} className="group hover:bg-[#0B1215] transition-all">
-                  <td className="px-8 py-5 flex items-center gap-5">
-                    <div className="w-12 h-12 bg-[#0B1215] border border-[#23333A] rounded flex items-center justify-center text-[#00FFCC] font-bold text-sm uppercase group-hover:border-[#006470] transition-all">
-                      {u.username.substring(0, 2)}
+                <tr key={u.id} className="group hover:bg-[var(--ind-header)]/50 transition-all">
+                  <td className="px-10 py-6 flex items-center gap-6">
+                    {/* User Identity Box */}
+                    <div className="w-12 h-12 bg-[var(--ind-bg)] border border-[var(--ind-border)] rounded-[var(--ind-radius)] flex items-center justify-center text-[var(--ind-cyan)] font-black text-xs shadow-inner group-hover:border-[var(--ind-cyan)]/40 transition-all">
+                      {u.username.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-[#00FFCC] transition-colors">{u.username}</span>
-                        <span className="text-[9px] font-data text-[#64748B] tracking-widest mt-0.5 uppercase">Node UID: {u.id}</span>
+                        <span className="text-sm font-extrabold text-white uppercase tracking-tight group-hover:text-[var(--ind-cyan)] transition-colors leading-none">{u.username}</span>
+                        <span className="ind-data text-[8px] text-[var(--ind-slate)] mt-2 uppercase">Core_UID: {u.id}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-center">
-                    <span className={`text-[8px] font-bold px-3 py-1 rounded border uppercase tracking-widest ${u.role === 'admin' ? 'bg-amber-500/5 border-amber-600/30 text-amber-500' : 'bg-[#006470]/5 border-[#006470]/30 text-[#00FFCC]'}`}>
+                  <td className="px-10 py-6 text-center">
+                    <span className={`ind-status-badge ${u.role === 'admin' ? 'text-[var(--ind-amber)] border-[var(--ind-amber)]/20 bg-amber-500/5' : 'text-[var(--ind-cyan)] border-[var(--ind-cyan)]/20 bg-cyan-500/5'}`}>
                       {u.role === 'admin' ? 'Administrator' : 'Operative'}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-right pr-10">
+                  <td className="px-10 py-6 text-right">
                     <button 
                         onClick={() => handleDeleteUser(u.id)}
-                        className="p-2 text-slate-700 hover:text-red-500 hover:bg-red-500/5 rounded transition-all"
+                        className="p-3 text-slate-700 hover:text-[var(--ind-red)] hover:bg-red-500/5 rounded-[var(--ind-radius)] transition-all group/btn"
                     >
-                        <Trash2 size={18} />
+                        <Trash2 size={20} className="group-hover/btn:scale-110 transition-transform" />
                     </button>
                   </td>
                 </tr>
@@ -181,9 +174,9 @@ const UserManagement = () => {
           </table>
 
           {users.length === 0 && (
-            <div className="py-32 flex flex-col items-center justify-center gap-4 opacity-20">
-                <Fingerprint size={48} />
-                <p className="label-caps tracking-[0.4em]">Awaiting Identity Sync...</p>
+            <div className="py-40 flex flex-col items-center justify-center gap-6 opacity-20 grayscale">
+                <Fingerprint size={64} className="text-[var(--ind-petroleum)]" />
+                <p className="ind-label tracking-[0.5em]">Awaiting Identity Sync...</p>
             </div>
           )}
         </div>

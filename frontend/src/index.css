@@ -1,3 +1,101 @@
+/* 1. ADIM: MUTLAKA EN TEPEDE OLMALI */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* 2. ADIM: TAILWIND DİREKTİFLERİ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* 🎨 Core Colors */
+    --ind-bg: #0B1215;
+    --ind-panel: #141F24;
+    --ind-header: #1C262B;
+    --ind-border: #23333A;
+    
+    /* 🚦 Status Colors */
+    --ind-cyan: #00FFCC;
+    --ind-petroleum: #006470;
+    --ind-amber: #f59e0b;
+    --ind-red: #dc2626;
+    --ind-slate: #94A3B8;
+
+    /* 🔡 Typography */
+    --font-main: 'Inter', sans-serif;
+    --font-data: 'JetBrains Mono', monospace;
+
+    /* 📐 Geometry */
+    --ind-radius: 4px;
+  }
+
+  body {
+    @apply bg-[#0B1215] text-[#F1F5F9] m-0 overflow-x-hidden;
+    font-family: var(--font-main);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Vite Layout Reset */
+  #root {
+    max-width: 100% !important;
+    width: 100vw;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+  }
+}
+
+@layer components {
+  /* 🏗️ INDUSTRIAL COMPONENT LIBRARY */
+
+  /* 📦 1. KAPSAYICILAR */
+  .ind-panel {
+    @apply bg-[var(--ind-panel)] border border-[var(--ind-border)] rounded-[var(--ind-radius)] shadow-sm;
+  }
+
+  /* 🔡 2. BAŞLIK HİYERARŞİSİ */
+  .ind-title {
+    @apply text-4xl font-extrabold tracking-tight uppercase text-white leading-none;
+  }
+
+  .ind-subtitle {
+    @apply text-sm font-bold uppercase tracking-wider text-slate-200;
+  }
+
+  .ind-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ind-slate)];
+  }
+
+  /* 📊 3. VERİ VE RAKAMLAR */
+  .ind-value-lg {
+    font-family: var(--font-data);
+    @apply text-5xl font-bold tabular-nums tracking-tighter;
+  }
+
+  .ind-value-md {
+    font-family: var(--font-data);
+    @apply text-xl font-bold tabular-nums;
+  }
+
+  .ind-unit {
+    @apply text-[10px] font-bold text-[var(--ind-slate)] uppercase ml-1.5;
+  }
+
+  /* 🚦 4. DURUM ROZETLERİ */
+  .ind-status-badge {
+    @apply text-[9px] font-black px-2.5 py-1 rounded border uppercase tracking-widest;
+  }
+
+  /* 🖱️ 5. ETKİLEŞİM ELEMENTLERİ */
+  .ind-input {
+    @apply bg-[var(--ind-bg)] border border-[var(--ind-border)] rounded-[var(--ind-radius)] 
+           px-4 py-2 text-xs font-bold text-white outline-none focus:border-[var(--ind-petroleum)] 
+           transition-all uppercase tracking-wider;
+  }
+
+  .ind-btn-primary {
+    @apply bg-[var(--ind-petroleum)] hover:bg-[#007a8a] text-white font-bold py-2 px-4 
+           rounded-[var(--ind-radius)] text-[10px] uppercase tracking-widest transition-all 
+           active:scale-95 shadow-lg;
+  }
+}

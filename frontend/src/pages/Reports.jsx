@@ -3,13 +3,16 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { 
-  Loader2, Database, TrendingUp, Clock, Info, LineChart as ChartIcon, 
+  Loader2, Database, TrendingUp, Clock, Info,
   Calendar, Activity, ArrowDown, ArrowUp
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 const Reports = ({ userId }) => {
-  // --- 🔒 CORE STATE (FULLY PRESERVED) ---
+  const { t } = useTranslation();
+
+  // --- 🔒 CORE STATE (PRESERVED) ---
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]); 
@@ -46,7 +49,7 @@ const Reports = ({ userId }) => {
     loadInfrastructure();
   }, [connections.length]);
 
-  // --- 📊 ANALYTICAL STATS ---
+  // --- 📊 ANALYTICAL STATS (IDS MONO) ---
   const stats = useMemo(() => {
     if (!reportData.length) return null;
     const values = reportData.map(d => Number(d.val) || 0);
@@ -74,66 +77,54 @@ const Reports = ({ userId }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10 font-sans">
       
-      {/* 🔡 INDUSTRIAL CORE STYLES */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 12px 16px; border-radius: 4px; font-weight: 600; outline: none; color: #fff; }
-          .input-field:focus { border-color: #3b82f6; }
-        `}
-      </style>
-
       {/* 🏛️ HEADER SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[#23333A] pb-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[var(--ind-border)] pb-10">
         <div className="space-y-4 min-w-[380px]">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-blue-500"></div>
-            <span className="label-caps">Data Historian Engine</span>
+            <div className="w-1.5 h-6 bg-[var(--ind-petroleum)]"></div>
+            <span className="ind-label">Data Historian Engine</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight uppercase text-white leading-none">Historian</h1>
-          <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748B] uppercase tracking-widest">
-             <Clock size={14} className="text-blue-500" /> Granular Time-Series Analysis
+          <h1 className="ind-title">Historian Hub</h1>
+          <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--ind-slate)] uppercase tracking-widest">
+             <Clock size={14} className="text-[var(--ind-cyan)]" /> Granular Time-Series Analysis
           </div>
         </div>
 
-        {/* 🎯 ANALYTICAL INSIGHTS GUIDE (Sert & Net) */}
-        <div className="flex-1 industrial-panel p-6 rounded-md relative overflow-hidden flex flex-col md:flex-row gap-6 border-l-4 border-l-blue-600 shadow-sm">
-            <div className="p-3 bg-blue-600/10 text-blue-400 rounded h-fit"><Info size={20}/></div>
+        {/* 🎯 ANALYTICAL INSIGHTS GUIDE */}
+        <div className="flex-1 ind-panel p-6 border-l-4 border-l-[var(--ind-petroleum)] relative overflow-hidden flex flex-col md:flex-row gap-6">
+            <div className="p-3 bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] rounded h-fit"><Info size={20}/></div>
             <div className="space-y-4">
-                <h5 className="label-caps border-b border-[#23333A] pb-2 inline-block">Historical Intelligence Protocol</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <h5 className="ind-label border-b border-[var(--ind-border)] pb-2 inline-block">Historical Intelligence Protocol</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-1">
-                        <p className="text-blue-400 text-[10px] font-bold uppercase tracking-tighter">Node Analysis</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Compare behavior across physical sensors and virtual logic variables.</p>
+                        <p className="ind-label !text-[var(--ind-cyan)]">Node Analysis</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Behavioral sync across sensors & logic.</p>
                     </div>
-                    <div className="space-y-1 border-l border-[#23333A] pl-4">
-                        <p className="text-purple-400 text-[10px] font-bold uppercase tracking-tighter">Trend Projection</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Identify long-term patterns and operational drifts in infrastructure.</p>
+                    <div className="space-y-1 border-l border-[var(--ind-border)] pl-4">
+                        <p className="ind-label !text-purple-400">Trend Projection</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Long-term operational drift patterns.</p>
                     </div>
                 </div>
             </div>
         </div>
       </div>
 
-      {/* 📊 CONTROL CONSOLE */}
-      <div className="bg-[#0B1215] border border-[#23333A] p-8 rounded-md shadow-inner flex flex-col xl:flex-row gap-6 items-end relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full bg-blue-600" />
+      {/* 📊 CONTROL CONSOLE (IDS Input Mode) */}
+      <div className="ind-panel p-8 bg-[var(--ind-bg)] shadow-inner flex flex-col xl:flex-row gap-6 items-end relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--ind-petroleum)]" />
         
-        <div className="flex-1 w-full space-y-2">
-          <label className="label-caps opacity-50 ml-1">Target Infrastructure Node</label>
+        <div className="flex-1 w-full space-y-3">
+          <label className="ind-label opacity-40 ml-1">Target Infrastructure Node</label>
           <select 
-            className="w-full input-field text-[11px] uppercase tracking-wider cursor-pointer"
+            className="w-full ind-input !bg-[var(--ind-panel)] cursor-pointer"
             value={selectedTag}
             onChange={(e) => setSelectedTag(e.target.value)}
           >
             <option value="">SELECT TAG TO ANALYZE...</option>
             {allSystemTags.map(tag => (
-              <option key={tag.id} value={tag.id} className="bg-[#141F24]">
+              <option key={tag.id} value={tag.id} className="bg-slate-900">
                 {tag.type === 'virtual' ? 'CORE' : 'FIELD'} // {tag.tag_name.toUpperCase()} — [{tag.sourceName}]
               </option>
             ))}
@@ -141,23 +132,23 @@ const Reports = ({ userId }) => {
         </div>
 
         {/* 🕒 TIME SELECTION */}
-        <div className="w-full xl:w-fit space-y-2">
-          <label className="label-caps opacity-50 ml-1">Analysis Timeframe</label>
-          <div className="flex flex-col md:flex-row gap-2">
-            <div className="relative group">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-blue-500/50 z-10 pointer-events-none">FROM</span>
+        <div className="w-full xl:w-fit space-y-3">
+          <label className="ind-label opacity-40 ml-1">Analysis Timeframe</label>
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-[var(--ind-petroleum)] z-10 pointer-events-none">FROM</span>
               <input 
                 type="datetime-local" 
-                className="input-field pl-12 text-[11px] w-full md:w-56 [color-scheme:dark]" 
+                className="ind-input !pl-12 !w-full md:!w-60 [color-scheme:dark]" 
                 value={dateRange.start} 
                 onChange={e => setDateRange({...dateRange, start: e.target.value})} 
               />
             </div>
-            <div className="relative group">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-blue-500/50 z-10 pointer-events-none">TO</span>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-[var(--ind-petroleum)] z-10 pointer-events-none">TO</span>
               <input 
                 type="datetime-local" 
-                className="input-field pl-10 text-[11px] w-full md:w-56 [color-scheme:dark]" 
+                className="ind-input !pl-10 !w-full md:!w-60 [color-scheme:dark]" 
                 value={dateRange.end} 
                 onChange={e => setDateRange({...dateRange, end: e.target.value})} 
               />
@@ -168,7 +159,7 @@ const Reports = ({ userId }) => {
         <button 
           onClick={generateReport} 
           disabled={loading || !selectedTag} 
-          className="w-full xl:w-48 py-3.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-[10px] tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-20 active:scale-95"
+          className="w-full xl:w-56 ind-btn-primary !py-4 flex items-center justify-center gap-3 disabled:opacity-20"
         >
           {loading ? <Loader2 size={16} className="animate-spin"/> : <Activity size={16}/>} 
           {loading ? 'ANALYZING...' : 'RUN HISTORY'}
@@ -177,69 +168,83 @@ const Reports = ({ userId }) => {
 
       {/* 📈 ANALYTICS ENGINE OUTPUT */}
       {reportData.length > 0 && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
           
-          {/* STATS CARDS (Tabular Numbers) */}
+          {/* STATS CARDS (IDS Value Mode) */}
           {stats && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-rose-600">
-                <div className="p-3 bg-rose-500/5 text-rose-500 rounded"><TrendingUp size={24}/></div>
+              <div className="ind-panel p-8 flex items-center gap-8 shadow-lg border-t-2 border-t-[var(--ind-red)]">
+                <div className="p-4 bg-[var(--ind-red)]/5 text-[var(--ind-red)] rounded border border-[var(--ind-red)]/10"><TrendingUp size={28}/></div>
                 <div>
-                  <p className="label-caps !text-[8px] mb-1">Maximum Recorded</p>
-                  <h4 className="text-3xl font-bold font-data text-white">{stats.max}</h4>
+                  <p className="ind-label !text-[8px] mb-2 opacity-50">Maximum Recorded</p>
+                  <h4 className="ind-value-lg !text-4xl text-white">{stats.max}</h4>
                 </div>
               </div>
-              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-blue-600">
-                <div className="p-3 bg-blue-500/5 text-blue-500 rounded"><Activity size={24}/></div>
+              <div className="ind-panel p-8 flex items-center gap-8 shadow-lg border-t-2 border-t-[var(--ind-cyan)]">
+                <div className="p-4 bg-[var(--ind-cyan)]/5 text-[var(--ind-cyan)] rounded border border-[var(--ind-cyan)]/10"><Activity size={28}/></div>
                 <div>
-                  <p className="label-caps !text-[8px] mb-1">Mean Average</p>
-                  <h4 className="text-3xl font-bold font-data text-white">{stats.avg}</h4>
+                  <p className="ind-label !text-[8px] mb-2 opacity-50">Mean Average</p>
+                  <h4 className="ind-value-lg !text-4xl text-white">{stats.avg}</h4>
                 </div>
               </div>
-              <div className="industrial-panel p-6 rounded-md flex items-center gap-6 shadow-sm border-t-2 border-t-emerald-600">
-                <div className="p-3 bg-emerald-500/5 text-emerald-500 rounded"><ArrowDown size={24}/></div>
+              <div className="ind-panel p-8 flex items-center gap-8 shadow-lg border-t-2 border-t-emerald-600">
+                <div className="p-4 bg-emerald-500/5 text-emerald-500 rounded border border-emerald-500/10"><ArrowDown size={28}/></div>
                 <div>
-                  <p className="label-caps !text-[8px] mb-1">Minimum Recorded</p>
-                  <h4 className="text-3xl font-bold font-data text-white">{stats.min}</h4>
+                  <p className="ind-label !text-[8px] mb-2 opacity-50">Minimum Recorded</p>
+                  <h4 className="ind-value-lg !text-4xl text-white">{stats.min}</h4>
                 </div>
               </div>
             </div>
           )}
 
-          {/* MAIN CHART CONTAINER */}
-          <div className="bg-[#0B1215] border border-[#23333A] p-10 rounded-md shadow-inner h-[550px] relative overflow-hidden">
+          {/* MAIN CHART CONTAINER (Industrial Chart) */}
+          <div className="ind-panel p-10 h-[600px] relative overflow-hidden bg-[var(--ind-bg)]/50 shadow-inner">
             <div className="absolute top-6 left-10 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3B82F6]"></div>
-                <span className="label-caps !text-[8px] opacity-40">Temporal Waveform Reconstruction // 1:1 Precision</span>
+                <div className="w-2 h-2 rounded-full bg-[var(--ind-cyan)] shadow-[0_0_10px_#00FFCC]"></div>
+                <span className="ind-label !text-[9px] opacity-40 lowercase">Temporal Waveform Reconstruction // 1:1 precision mapping</span>
             </div>
             
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reportData} margin={{ top: 40, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="0" stroke="#1E293B" vertical={false} opacity={0.2} />
+                <LineChart data={reportData} margin={{ top: 60, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="0" stroke="var(--ind-border)" vertical={false} opacity={0.3} />
                   <XAxis 
                     dataKey="ts" 
-                    stroke="#475569" 
+                    stroke="var(--ind-slate)" 
                     fontSize={10} 
                     fontWeight="700" 
                     tickLine={false} 
                     axisLine={false} 
-                    dy={15} 
+                    dy={20} 
                     tickFormatter={(t) => new Date(t).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})} 
                   />
-                  <YAxis stroke="#475569" fontSize={10} fontWeight="700" tickLine={false} axisLine={false} dx={-10} />
+                  <YAxis 
+                    stroke="var(--ind-slate)" 
+                    fontSize={10} 
+                    fontWeight="700" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    dx={-10} 
+                  />
                   <Tooltip 
-                    contentStyle={{backgroundColor: '#141F24', border: '1px solid #23333A', borderRadius: '4px', fontSize: '11px', color: '#fff'}}
-                    itemStyle={{fontWeight: 'bold', textTransform: 'uppercase'}}
+                    contentStyle={{
+                      backgroundColor: 'var(--ind-panel)', 
+                      border: '1px solid var(--ind-border)', 
+                      borderRadius: '4px', 
+                      fontSize: '11px', 
+                      color: '#fff',
+                      fontFamily: 'var(--font-data)'
+                    }}
+                    itemStyle={{fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--ind-cyan)'}}
                     labelFormatter={(label) => new Date(label).toLocaleString('tr-TR')}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="val" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2.5} 
+                    stroke="var(--ind-cyan)" 
+                    strokeWidth={3} 
                     dot={false} 
                     activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }} 
-                    animationDuration={1000}
+                    animationDuration={1500}
                   />
                 </LineChart>
             </ResponsiveContainer>

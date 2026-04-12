@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, Trash2, Globe, Activity, Power, PowerOff, ListTree, 
-  Settings2, HardDrive, Info, Share2, ShieldCheck, Fingerprint, X, 
-  ChevronDown, Zap, Database // <--- Database buraya eklendi!
+  Settings2, HardDrive, Info, X, Zap, Database, Server, Link2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 const ConnectionPage = ({ connections = [], onRefresh }) => {
+  const { t } = useTranslation();
+
   // --- 🔒 CORE STATE (PRESERVED) ---
   const [isConnModalOpen, setIsConnModalOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -81,47 +83,35 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10 font-sans">
       
-      {/* 🔡 INDUSTRIAL STYLES */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 12px 16px; border-radius: 4px; font-weight: 600; outline: none; }
-          .input-field:focus { border-color: #006470; }
-        `}
-      </style>
-
       {/* 🏛️ HEADER SECTION */}
-      <div className="flex justify-between items-end border-b border-[#23333A] pb-8">
+      <div className="flex justify-between items-end border-b border-[var(--ind-border)] pb-10">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-[#00FFCC]"></div>
-            <span className="label-caps">Network Infrastructure</span>
+            <div className="w-1.5 h-6 bg-[var(--ind-cyan)]"></div>
+            <span className="ind-label">Network Infrastructure</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white uppercase">Connectivity</h1>
+          <h1 className="ind-title">Connectivity</h1>
           <button 
             onClick={() => setIsConnModalOpen(true)} 
-            className="bg-[#006470] hover:bg-[#007a8a] text-white px-6 py-3 rounded-md flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest transition-all"
+            className="ind-btn-primary flex items-center gap-3"
           >
             <PlusCircle size={16} /> Add New Interface
           </button>
         </div>
 
-        {/* INTEGRATED GUIDE (Sert Köşeli) */}
-        <div className="hidden lg:flex industrial-panel p-5 rounded-md gap-6 max-w-2xl border-l-4 border-l-[#006470]">
-           <div className="text-[#00FFCC] opacity-50"><Info size={24}/></div>
-           <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+        {/* INTEGRATED GUIDE */}
+        <div className="hidden lg:flex ind-panel p-6 border-l-4 border-l-[var(--ind-petroleum)] max-w-2xl gap-8">
+           <div className="text-[var(--ind-cyan)] opacity-40"><Info size={24}/></div>
+           <div className="grid grid-cols-2 gap-x-12 gap-y-2">
               <div className="space-y-1">
-                <p className="label-caps !text-[#00FFCC]">Protocol Sync</p>
-                <p className="text-[10px] text-slate-500 font-medium">Standard Endpoint URLs (opc.tcp://).</p>
+                <p className="ind-label !text-[var(--ind-cyan)]">Protocol Sync</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">Standard Endpoint URLs (opc.tcp://)</p>
               </div>
               <div className="space-y-1">
-                <p className="label-caps !text-amber-500">Role Mapping</p>
-                <p className="text-[10px] text-slate-500 font-medium">Assign functional roles to tag nodes.</p>
+                <p className="ind-label !text-[var(--ind-amber)]">Role Mapping</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">Assign functional roles to tag nodes</p>
               </div>
            </div>
         </div>
@@ -133,40 +123,42 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
           const isOnline = String(conn.status).toLowerCase() === 'connected' || conn.status === true;
           const isEnergy = conn.connection_type === 'energy_analyzer';
           return (
-            <div key={conn.id} className={`industrial-panel rounded-md transition-all overflow-hidden ${!conn.enabled ? 'opacity-40' : 'hover:border-[#006470]'}`}>
-              {/* Status Header */}
-              <div className={`h-1 w-full ${!conn.enabled ? 'bg-slate-700' : (isOnline ? 'bg-[#00FFCC]' : 'bg-red-500')}`} />
+            <div key={conn.id} className={`ind-panel transition-all duration-300 overflow-hidden group ${!conn.enabled ? 'opacity-40 grayscale' : 'hover:border-[var(--ind-petroleum)]'}`}>
+              {/* Status Header Bar */}
+              <div className={`h-1.5 w-full ${!conn.enabled ? 'bg-slate-700' : (isOnline ? 'bg-[var(--ind-cyan)] shadow-[0_0_10px_rgba(0,255,204,0.3)]' : 'bg-[var(--ind-red)]')}`} />
               
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-8">
                   <div className="space-y-2">
-                    <h3 className="font-bold text-xl text-white tracking-tight">{conn.name.toUpperCase()}</h3>
-                    <div className="flex items-center gap-2 font-data text-[10px] text-slate-500"><Globe size={12} /> {conn.endpoint_url}</div>
+                    <h3 className="ind-subtitle !text-xl !text-white">{conn.name}</h3>
+                    <div className="flex items-center gap-2 ind-data !text-[10px] text-[var(--ind-slate)]">
+                      <Globe size={12} className="text-[var(--ind-petroleum)]" /> {conn.endpoint_url}
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleToggleEnabled(conn)} className={`p-2 rounded border ${conn.enabled ? 'border-[#00FFCC]/30 text-[#00FFCC] bg-[#00FFCC]/5' : 'border-slate-700 text-slate-600'}`}>
+                    <button onClick={() => handleToggleEnabled(conn)} className={`p-2.5 rounded border transition-all ${conn.enabled ? 'border-[var(--ind-cyan)]/30 text-[var(--ind-cyan)] bg-[var(--ind-cyan)]/5' : 'border-slate-800 text-slate-600'}`}>
                       {conn.enabled ? <Power size={18} /> : <PowerOff size={18} />}
                     </button>
-                    <button onClick={() => { setEditConnData(conn); setIsEditModalOpen(true); }} className="p-2 rounded border border-slate-700 text-slate-500 hover:text-white"><Settings2 size={18} /></button>
+                    <button onClick={() => { setEditConnData(conn); setIsEditModalOpen(true); }} className="p-2.5 ind-panel hover:text-white transition-all"><Settings2 size={18} /></button>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mb-8">
-                  <span className={`text-[9px] font-bold px-2 py-1 rounded border ${isOnline ? 'text-[#00FFCC] border-[#00FFCC]/20' : 'text-red-500 border-red-500/20'}`}>
+                <div className="flex gap-3 mb-10">
+                  <span className={`ind-status-badge ${isOnline ? 'text-[var(--ind-cyan)] border-[var(--ind-cyan)]/20 bg-[var(--ind-cyan)]/5' : 'text-[var(--ind-red)] border-[var(--ind-red)]/20 bg-[var(--ind-red)]/5'}`}>
                     {isOnline ? 'LINK ACTIVE' : 'NO RESPONSE'}
                   </span>
-                  {isEnergy && <span className="text-[9px] font-bold px-2 py-1 rounded border border-[#006470] text-[#00FFCC] bg-[#006470]/10 flex items-center gap-1 uppercase"> <Zap size={10} /> Energy Hub</span>}
+                  {isEnergy && <span className="ind-status-badge text-[var(--ind-amber)] border-[var(--ind-amber)]/20 bg-[var(--ind-amber)]/5 flex items-center gap-1.5"> <Zap size={10} /> Energy Hub</span>}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-6 border-t border-[var(--ind-border)]">
                   <button 
                     disabled={!conn.enabled} 
                     onClick={() => openTagManager(conn)} 
-                    className={`flex-1 py-3 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${conn.enabled ? 'bg-[#006470] text-white' : 'bg-slate-900 text-slate-700'}`}
+                    className={`flex-1 py-3.5 rounded-[var(--ind-radius)] text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${conn.enabled ? 'bg-[var(--ind-petroleum)] text-white hover:bg-[var(--ind-petroleum)]/80 shadow-lg' : 'bg-slate-900 text-slate-700'}`}
                   >
                     <ListTree size={16}/> Configure Nodes
                   </button>
-                  <button onClick={() => handleDeleteConnection(conn.id)} className="px-4 text-slate-600 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all border border-transparent hover:border-red-500/20">
+                  <button onClick={() => handleDeleteConnection(conn.id)} className="px-4 text-slate-600 hover:text-[var(--ind-red)] hover:bg-red-500/10 rounded-[var(--ind-radius)] transition-all border border-transparent hover:border-red-500/20">
                     <Trash2 size={18}/>
                   </button>
                 </div>
@@ -176,33 +168,38 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         })}
       </div>
 
-      {/* 🏷️ TAG MANAGEMENT MODAL (Industrial Design) */}
+      {/* 🏷️ TAG MANAGEMENT MODAL */}
       {isTagModalOpen && (
-        <div className="fixed inset-0 bg-[#0B1215]/95 backdrop-blur-sm z-[700] flex items-center justify-center p-8">
-          <div className="industrial-panel w-full max-w-6xl h-[85vh] rounded-md shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[#23333A] flex justify-between items-center bg-[#1C262B]">
-              <div className="flex items-center gap-4">
-                <ListTree size={24} className="text-[#00FFCC]"/>
-                <h2 className="text-xl font-bold text-white uppercase">{selectedConn?.name} <span className="text-slate-600 font-normal mx-2">//</span> NODE MAPPING</h2>
+        <div className="fixed inset-0 bg-[#0B1215]/95 backdrop-blur-md z-[700] flex items-center justify-center p-8">
+          <div className="ind-panel w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+            {/* Modal Header */}
+            <div className="px-8 py-6 bg-[var(--ind-header)] border-b border-[var(--ind-border)] flex justify-between items-center">
+              <div className="flex items-center gap-5">
+                <div className="p-3 bg-[var(--ind-petroleum)]/20 text-[var(--ind-cyan)] rounded border border-[var(--ind-petroleum)]/30">
+                  <ListTree size={24}/>
+                </div>
+                <div>
+                  <h2 className="ind-title !text-2xl text-white">{selectedConn?.name}</h2>
+                  <p className="ind-label !text-slate-500 mt-1">Industrial Node Mapping Protocol</p>
+                </div>
               </div>
-              <button onClick={() => setIsTagModalOpen(false)} className="p-2 text-slate-500 hover:text-white"><X size={24}/></button>
+              <button onClick={() => setIsTagModalOpen(false)} className="p-3 ind-panel hover:text-white transition-all"><X size={24}/></button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto p-12 space-y-12 scrollbar-hide">
               {/* Add Tag Form */}
-              <form onSubmit={handleAddTag} className="bg-[#0B1215] p-8 rounded border border-[#23333A] space-y-8 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#006470]"></div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <label className="label-caps">Node Role</label>
+              <form onSubmit={handleAddTag} className="ind-panel p-10 bg-[var(--ind-bg)] border-l-4 border-l-[var(--ind-petroleum)] space-y-10 relative shadow-inner">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                  <div className="space-y-3">
+                    <label className="ind-label">Node Role</label>
                     <select 
                       value={newTagData.tag_role} 
                       onChange={e => setNewTagData({...newTagData, tag_role: e.target.value})}
-                      className="w-full input-field text-xs uppercase"
+                      className="w-full ind-input !bg-[var(--ind-panel)]"
                     >
                       <option value="general">Standard Node</option>
                       {selectedConn?.connection_type === 'energy_analyzer' && (
-                        <optgroup label="ENERGY DATA" className="bg-[#141F24]">
+                        <optgroup label="ENERGY ANALYTICS" className="bg-[#141F24]">
                           <option value="voltage">Voltage (V)</option>
                           <option value="current">Current (A)</option>
                           <option value="power">Active Power (kW)</option>
@@ -212,56 +209,59 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
                       )}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-caps">Symbolic Name</label>
-                    <input type="text" placeholder="MAIN_L1_V" required className="w-full input-field text-sm" value={newTagData.tag_name} onChange={e => setNewTagData({...newTagData, tag_name: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="ind-label">Symbolic Name</label>
+                    <input type="text" placeholder="MAIN_L1_V" required className="w-full ind-input" value={newTagData.tag_name} onChange={e => setNewTagData({...newTagData, tag_name: e.target.value})} />
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-caps">OPC Node ID</label>
-                    <input type="text" placeholder="ns=2;s=Tag1" required className="w-full input-field text-sm font-data text-[#00FFCC]" value={newTagData.node_id} onChange={e => setNewTagData({...newTagData, node_id: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="ind-label">OPC Node ID</label>
+                    <input type="text" placeholder="ns=2;s=Tag1" required className="w-full ind-input ind-data !text-[var(--ind-cyan)]" value={newTagData.node_id} onChange={e => setNewTagData({...newTagData, node_id: e.target.value})} />
                   </div>
-                  <div className="space-y-2">
-                    <label className="label-caps">Unit</label>
-                    <input type="text" placeholder="kW / V / A" className="w-full input-field text-sm" value={newTagData.unit} onChange={e => setNewTagData({...newTagData, unit: e.target.value})} />
+                  <div className="space-y-3">
+                    <label className="ind-label">Engineering Unit</label>
+                    <input type="text" placeholder="kW / V / A" className="w-full ind-input" value={newTagData.unit} onChange={e => setNewTagData({...newTagData, unit: e.target.value})} />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between py-4 border-t border-[#23333A]">
-                  <div className="flex items-center gap-4">
-                    <Database size={20} className={newTagData.is_historian ? 'text-[#00FFCC]' : 'text-slate-700'} />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">Industrial Historian Recording</span>
+                <div className="flex items-center justify-between py-6 border-t border-[var(--ind-border)]">
+                  <div className="flex items-center gap-5">
+                    <Database size={22} className={newTagData.is_historian ? 'text-[var(--ind-cyan)]' : 'text-slate-800'} />
+                    <div>
+                      <span className="text-xs font-black text-white uppercase tracking-widest block">Historian Data Recording</span>
+                      <span className="text-[9px] text-slate-600 font-bold uppercase mt-1 block">Log changes to secure industrial storage</span>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setNewTagData({...newTagData, is_historian: !newTagData.is_historian})} className={`w-12 h-6 rounded-full relative transition-all ${newTagData.is_historian ? 'bg-[#006470]' : 'bg-slate-800'}`}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${newTagData.is_historian ? 'left-7' : 'left-1'}`} />
+                  <button type="button" onClick={() => setNewTagData({...newTagData, is_historian: !newTagData.is_historian})} className={`w-14 h-7 rounded-full relative transition-all shadow-inner ${newTagData.is_historian ? 'bg-[var(--ind-petroleum)]' : 'bg-slate-900'}`}>
+                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-md ${newTagData.is_historian ? 'left-8' : 'left-1'}`} />
                   </button>
                 </div>
 
-                <button type="submit" className="w-full py-4 bg-[#006470] text-white rounded font-bold text-[11px] uppercase tracking-widest hover:bg-[#007a8a] transition-all">Commit Node Definition</button>
+                <button type="submit" className="w-full ind-btn-primary !py-5 shadow-xl">Commit Node Definition</button>
               </form>
 
-              {/* Tag List Table Style */}
-              <div className="space-y-4 pb-10">
-                <div className="flex items-center gap-3 label-caps opacity-50"> <Activity size={14} /> Configured Nodes </div>
-                <div className="border border-[#23333A] rounded overflow-hidden">
+              {/* Tag List Table */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 ind-label opacity-60"> <Activity size={14} /> Active Node Configuration </div>
+                <div className="ind-panel overflow-hidden">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-[#1C262B] border-b border-[#23333A]">
-                      <tr>
-                        <th className="p-4 label-caps">State</th>
-                        <th className="p-4 label-caps">Tag Name</th>
-                        <th className="p-4 label-caps">Identifier</th>
-                        <th className="p-4 label-caps">Role</th>
-                        <th className="p-4 label-caps text-right">Action</th>
+                    <thead>
+                      <tr className="bg-[var(--ind-header)] border-b border-[var(--ind-border)]">
+                        <th className="p-5 ind-label">Log</th>
+                        <th className="p-5 ind-label">Symbol Name</th>
+                        <th className="p-5 ind-label">Identifier</th>
+                        <th className="p-5 ind-label">Role Mapping</th>
+                        <th className="p-5 ind-label text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#23333A]">
+                    <tbody className="divide-y divide-[var(--ind-border)]">
                       {tags.map(t => (
-                        <tr key={t.id} className="hover:bg-[#1C262B] transition-colors group text-white">
-                          <td className="p-4"><div className={`w-2 h-2 rounded-full ${t.is_historian ? 'bg-[#00FFCC] shadow-[0_0_8px_#00FFCC]' : 'bg-slate-700'}`} /></td>
-                          <td className="p-4 font-bold text-xs">{t.tag_name}</td>
-                          <td className="p-4 font-data text-[11px] text-slate-500">{t.node_id}</td>
-                          <td className="p-4"><span className="text-[9px] font-bold px-2 py-0.5 rounded border border-slate-700 bg-slate-800/50 uppercase">{t.tag_role}</span></td>
-                          <td className="p-4 text-right">
-                            <button onClick={() => handleDeleteTag(t.id)} className="p-2 text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
+                        <tr key={t.id} className="hover:bg-[var(--ind-header)]/50 transition-colors group">
+                          <td className="p-5"><div className={`w-2.5 h-2.5 rounded-full ${t.is_historian ? 'bg-[var(--ind-cyan)] shadow-[0_0_8px_var(--ind-cyan)]' : 'bg-slate-800'}`} /></td>
+                          <td className="p-5 text-sm font-extrabold text-white uppercase tracking-tight">{t.tag_name}</td>
+                          <td className="p-5 ind-data text-[11px] text-[var(--ind-slate)]">{t.node_id}</td>
+                          <td className="p-5"><span className="ind-status-badge text-[var(--ind-slate)] border-[var(--ind-border)] bg-[var(--ind-bg)]">{t.tag_role}</span></td>
+                          <td className="p-5 text-right">
+                            <button onClick={() => handleDeleteTag(t.id)} className="p-2 text-slate-700 hover:text-[var(--ind-red)] opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
                           </td>
                         </tr>
                       ))}
@@ -274,33 +274,42 @@ const ConnectionPage = ({ connections = [], onRefresh }) => {
         </div>
       )}
 
-      {/* CONNECTION MODALS (MODERATE DESIGN) */}
+      {/* CONNECTION MODALS (Established & Edit) */}
       {[isConnModalOpen, isEditModalOpen].some(Boolean) && (
-        <div className="fixed inset-0 bg-[#0B1215]/90 z-[700] flex items-center justify-center p-6">
-          <div className="industrial-panel p-10 rounded-md w-full max-w-xl shadow-2xl">
-            <h2 className="text-2xl font-bold text-white uppercase mb-8 flex items-center gap-3">
-              <HardDrive size={24} className="text-[#00FFCC]"/>
-              {isEditModalOpen ? 'Modify Interface' : 'Establish Source'}
-            </h2>
-            <form onSubmit={isEditModalOpen ? handleUpdateConnection : handleAddConnection} className="space-y-6">
-              <div className="space-y-2">
-                <label className="label-caps">Display Name</label>
-                <input type="text" className="w-full input-field text-sm" required value={isEditModalOpen ? editConnData.name : newConnData.name} onChange={e => isEditModalOpen ? setEditConnData({...editConnData, name: e.target.value}) : setNewConnData({...newConnData, name: e.target.value})} />
+        <div className="fixed inset-0 bg-[#0B1215]/95 backdrop-blur-md z-[700] flex items-center justify-center p-6">
+          <div className="ind-panel p-12 w-full max-w-2xl shadow-[0_0_80px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-5 mb-10 border-b border-[var(--ind-border)] pb-8">
+               <div className="p-3 bg-[var(--ind-petroleum)]/20 text-[var(--ind-cyan)] rounded border border-[var(--ind-petroleum)]/30">
+                 <Server size={24}/>
+               </div>
+               <div>
+                 <h2 className="ind-title !text-2xl">{isEditModalOpen ? 'Modify Interface' : 'Establish Protocol'}</h2>
+                 <p className="ind-label !text-slate-500 mt-1">Network Access & Data Exchange Settings</p>
+               </div>
+            </div>
+            
+            <form onSubmit={isEditModalOpen ? handleUpdateConnection : handleAddConnection} className="space-y-8">
+              <div className="space-y-3">
+                <label className="ind-label">Display Interface Name</label>
+                <input type="text" className="w-full ind-input" required value={isEditModalOpen ? editConnData.name : newConnData.name} onChange={e => isEditModalOpen ? setEditConnData({...editConnData, name: e.target.value}) : setNewConnData({...newConnData, name: e.target.value})} />
               </div>
-              <div className="space-y-2">
-                <label className="label-caps">Protocol Type</label>
-                <select className="w-full input-field text-xs uppercase" value={isEditModalOpen ? editConnData.connection_type : newConnData.connection_type} onChange={(e) => isEditModalOpen ? setEditConnData({...editConnData, connection_type: e.target.value}) : setNewConnData({...newConnData, connection_type: e.target.value})} >
+              <div className="space-y-3">
+                <label className="ind-label">Protocol Definition</label>
+                <select className="w-full ind-input cursor-pointer" value={isEditModalOpen ? editConnData.connection_type : newConnData.connection_type} onChange={(e) => isEditModalOpen ? setEditConnData({...editConnData, connection_type: e.target.value}) : setNewConnData({...newConnData, connection_type: e.target.value})} >
                   <option value="standard">OPC UA Standard</option>
                   <option value="energy_analyzer">Energy Intelligence Source</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="label-caps">Endpoint URL</label>
-                <input type="text" className="w-full input-field text-xs font-data text-[#00FFCC]" required value={isEditModalOpen ? editConnData.endpoint_url : newConnData.endpoint_url} onChange={e => isEditModalOpen ? setEditConnData({...editConnData, endpoint_url: e.target.value}) : setNewConnData({...newConnData, endpoint_url: e.target.value})} />
+              <div className="space-y-3">
+                <label className="ind-label">Network Endpoint URL</label>
+                <div className="relative">
+                  <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ind-petroleum)]" size={16} />
+                  <input type="text" className="w-full ind-input !pl-12 ind-data !text-[var(--ind-cyan)]" required value={isEditModalOpen ? editConnData.endpoint_url : newConnData.endpoint_url} onChange={e => isEditModalOpen ? setEditConnData({...editConnData, endpoint_url: e.target.value}) : setNewConnData({...newConnData, endpoint_url: e.target.value})} />
+                </div>
               </div>
-              <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => { setIsConnModalOpen(false); setIsEditModalOpen(false); }} className="flex-1 py-3 text-slate-500 font-bold uppercase text-[10px] tracking-widest">Cancel</button>
-                <button type="submit" className="flex-[2] py-3 bg-[#006470] text-white rounded font-bold uppercase text-[10px] tracking-widest hover:bg-[#007a8a]"> {isEditModalOpen ? 'Commit Changes' : 'Initialize Protocol'} </button>
+              <div className="flex gap-4 pt-6">
+                <button type="button" onClick={() => { setIsConnModalOpen(false); setIsEditModalOpen(false); }} className="flex-1 py-4 ind-panel !bg-transparent text-slate-500 font-bold uppercase text-[10px] tracking-widest border border-[var(--ind-border)] hover:text-white transition-all">Abort</button>
+                <button type="submit" className="flex-[2] ind-btn-primary !py-4 shadow-xl"> {isEditModalOpen ? 'Commit Update' : 'Initialize Protocol'} </button>
               </div>
             </form>
           </div>

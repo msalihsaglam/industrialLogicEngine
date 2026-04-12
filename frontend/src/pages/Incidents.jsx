@@ -4,8 +4,10 @@ import {
   Trash2, Search, Clock, ShieldAlert, Terminal, ArrowRight, 
   CheckCircle2, BarChart3
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Incidents = ({ alarms = [], onClearAlarms }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
 
@@ -38,94 +40,79 @@ const Incidents = ({ alarms = [], onClearAlarms }) => {
     switch (severity?.toLowerCase()) {
       case 'critical': 
         return { 
-          bg: 'bg-[#141F24]', 
-          border: 'border-red-600/30', 
-          text: 'text-red-500', 
-          accent: 'bg-red-600',
-          icon: <AlertCircle size={24} className="text-red-500" /> 
+          text: 'text-[var(--ind-red)]', 
+          accent: 'bg-[var(--ind-red)]',
+          border: 'border-[var(--ind-red)]/30',
+          icon: <AlertCircle size={22} className="text-[var(--ind-red)]" /> 
         };
       case 'warning': 
         return { 
-          bg: 'bg-[#141F24]', 
-          border: 'border-amber-600/30', 
-          text: 'text-amber-500', 
-          accent: 'bg-amber-600',
-          icon: <AlertTriangle size={24} className="text-amber-500" /> 
+          text: 'text-[var(--ind-amber)]', 
+          accent: 'bg-[var(--ind-amber)]',
+          border: 'border-[var(--ind-amber)]/30',
+          icon: <AlertTriangle size={22} className="text-[var(--ind-amber)]" /> 
         };
       case 'info': 
         return { 
-          bg: 'bg-[#141F24]', 
-          border: 'border-[#006470]/30', 
-          text: 'text-[#00FFCC]', 
-          accent: 'bg-[#006470]',
-          icon: <Info size={24} className="text-[#00FFCC]" /> 
+          text: 'text-[var(--ind-cyan)]', 
+          accent: 'bg-[var(--ind-petroleum)]',
+          border: 'border-[var(--ind-petroleum)]/30',
+          icon: <Info size={22} className="text-[var(--ind-cyan)]" /> 
         };
       default: 
         return { 
-          bg: 'bg-[#141F24]', 
-          border: 'border-[#23333A]', 
-          text: 'text-slate-400', 
+          text: 'text-[var(--ind-slate)]', 
           accent: 'bg-slate-700',
-          icon: <Activity size={24} className="text-slate-500" /> 
+          border: 'border-[var(--ind-border)]',
+          icon: <Activity size={22} className="text-slate-500" /> 
         };
     }
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10 font-sans">
       
-      {/* 🔡 INDUSTRIAL STYLES */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 12px 16px; border-radius: 4px; font-weight: 600; outline: none; }
-        `}
-      </style>
-
       {/* 🏛️ HEADER & ANALYTICS BAR */}
-      <div className="flex flex-col xl:flex-row justify-between items-start gap-10 border-b border-[#23333A] pb-10">
+      <div className="flex flex-col xl:flex-row justify-between items-start gap-10 border-b border-[var(--ind-border)] pb-10">
         <div className="space-y-4 min-w-[350px]">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-[#00FFCC]"></div>
-            <span className="label-caps">Event Monitoring Engine</span>
+            <div className="w-1.5 h-6 bg-[var(--ind-cyan)]"></div>
+            <span className="ind-label">Event Monitoring Engine</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight uppercase text-white">Incident Log</h1>
+          <h1 className="ind-title">Incident Log</h1>
           <button 
             onClick={onClearAlarms}
-            className="flex items-center gap-2 px-6 py-3 bg-[#141F24] hover:bg-red-900/20 text-red-500 border border-red-900/30 rounded-md transition-all font-bold text-[10px] uppercase tracking-widest"
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-950/10 hover:bg-red-600 hover:text-white text-[var(--ind-red)] border border-red-900/20 rounded-[var(--ind-radius)] transition-all text-[9px] font-black uppercase tracking-[0.2em]"
           >
-            <Trash2 size={16} /> Purge Analytics Cache
+            <Trash2 size={14} /> Purge Analytics Cache
           </button>
         </div>
 
-        {/* KPI TILES (Sert ve Net) */}
+        {/* KPI TILES (IDS Layout) */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-            <div className="industrial-panel p-6 rounded-md border-t-4 border-t-red-600">
-                <p className="label-caps mb-4 !text-red-500">Critical Alarms</p>
-                <h4 className="text-4xl font-bold font-data">{stats.critical}</h4>
+            <div className="ind-panel p-6 border-t-4 border-t-[var(--ind-red)]">
+                <p className="ind-label mb-4 !text-[var(--ind-red)]">Critical Alarms</p>
+                <h4 className="ind-value-lg text-white">{stats.critical}</h4>
             </div>
-            <div className="industrial-panel p-6 rounded-md border-t-4 border-t-amber-600">
-                <p className="label-caps mb-4 !text-amber-500">Warnings</p>
-                <h4 className="text-4xl font-bold font-data">{stats.warning}</h4>
+            <div className="ind-panel p-6 border-t-4 border-t-[var(--ind-amber)]">
+                <p className="ind-label mb-4 !text-[var(--ind-amber)]">Warnings</p>
+                <h4 className="ind-value-lg text-white">{stats.warning}</h4>
             </div>
-            <div className="industrial-panel p-6 rounded-md border-t-4 border-t-[#006470]">
-                <p className="label-caps mb-4 !text-[#00FFCC]">Total Events</p>
-                <h4 className="text-4xl font-bold font-data">{stats.total}</h4>
+            <div className="ind-panel p-6 border-t-4 border-t-[var(--ind-petroleum)]">
+                <p className="ind-label mb-4 !text-[var(--ind-cyan)]">Total Events</p>
+                <h4 className="ind-value-lg text-white">{stats.total}</h4>
             </div>
         </div>
       </div>
 
-      {/* 🔍 SEARCH & FILTERS */}
-      <div className="flex flex-col md:flex-row items-center gap-4 bg-[#141F24] p-2 rounded-md border border-[#23333A]">
-        <div className="flex-1 flex items-center gap-4 px-4 py-2 border-r border-[#23333A]">
-          <Search size={18} className="text-[#006470]" />
+      {/* 🔍 SEARCH & FILTERS (Industrial Input) */}
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-[var(--ind-panel)] p-2 rounded-[var(--ind-radius)] border border-[var(--ind-border)]">
+        <div className="flex-1 flex items-center gap-4 px-4 py-2 border-r border-[var(--ind-border)]">
+          <Search size={16} className="text-[var(--ind-petroleum)]" />
           <input 
             type="text" 
             placeholder="FILTER BY LOG MESSAGE, ENGINE OR CODE..." 
-            className="bg-transparent border-none outline-none text-[10px] text-white w-full font-bold uppercase tracking-widest placeholder:text-slate-700"
+            className="bg-transparent border-none outline-none text-[10px] text-white w-full font-bold uppercase tracking-[0.2em] placeholder:text-slate-800"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -135,7 +122,7 @@ const Incidents = ({ alarms = [], onClearAlarms }) => {
                 <button 
                     key={f}
                     onClick={() => setSeverityFilter(f)}
-                    className={`px-4 py-2 rounded text-[9px] font-bold uppercase tracking-widest transition-all ${severityFilter === f ? 'bg-[#006470] text-white' : 'text-slate-500 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-[var(--ind-radius)] text-[9px] font-black uppercase tracking-widest transition-all ${severityFilter === f ? 'bg-[var(--ind-petroleum)] text-white' : 'text-slate-600 hover:text-white'}`}
                 >
                     {f}
                 </button>
@@ -143,12 +130,12 @@ const Incidents = ({ alarms = [], onClearAlarms }) => {
         </div>
       </div>
 
-      {/* 📋 INCIDENT FEED */}
+      {/* 📋 INCIDENT FEED (IDS List Style) */}
       <div className="space-y-4">
         {filteredAlarms.length === 0 ? (
-          <div className="py-32 text-center industrial-panel border-dashed rounded-md opacity-30 flex flex-col items-center gap-6">
-            <CheckCircle2 size={48} className="text-[#006470]" />
-            <p className="label-caps tracking-[0.3em]">Zero Anomalies Discovered // System Idle</p>
+          <div className="py-32 text-center ind-panel border-dashed opacity-30 flex flex-col items-center gap-6">
+            <CheckCircle2 size={48} className="text-[var(--ind-petroleum)]" />
+            <p className="ind-label tracking-[0.3em]">Zero Anomalies Discovered // System Idle</p>
           </div>
         ) : (
           filteredAlarms.map((a, i) => {
@@ -156,66 +143,67 @@ const Incidents = ({ alarms = [], onClearAlarms }) => {
             const isComplex = a.is_complex === true || a.threshold === "DYNAMIC";
             
             return (
-              <div key={i} className={`industrial-panel p-0 rounded-md flex flex-col xl:flex-row transition-all hover:border-slate-500 overflow-hidden`}>
+              <div key={i} className="ind-panel p-0 flex flex-col xl:flex-row transition-all hover:border-slate-600 group overflow-hidden">
                 
                 {/* Status Indicator Bar */}
                 <div className={`w-full xl:w-1.5 h-1.5 xl:h-auto ${styles.accent}`} />
                 
                 <div className="flex-1 p-6 flex flex-col xl:flex-row justify-between items-center gap-8">
                   
-                  <div className="flex items-center gap-6 w-full xl:w-auto">
-                    <div className="p-4 bg-[#0B1215] rounded border border-[#23333A] flex items-center justify-center min-w-[64px]">
+                  <div className="flex items-center gap-8 w-full xl:w-auto">
+                    {/* Icon Cell */}
+                    <div className="p-4 bg-[var(--ind-bg)] rounded border border-[var(--ind-border)] flex items-center justify-center min-w-[68px] shadow-inner group-hover:border-[var(--ind-slate)]/20 transition-all">
                       {isComplex ? <Layers size={24} className="text-purple-500" /> : styles.icon}
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded border uppercase tracking-widest bg-[#0B1215] ${styles.text} ${styles.border}`}>
+                        <span className={`ind-status-badge ${styles.text} ${styles.border} bg-[var(--ind-bg)]`}>
                           {a.severity?.toUpperCase()}
                         </span>
                         {isComplex && (
-                          <span className="text-[8px] font-bold px-2 py-0.5 rounded border border-purple-500/30 text-purple-400 bg-purple-500/10 uppercase tracking-widest">
+                          <span className="ind-status-badge text-purple-400 border-purple-500/20 bg-purple-500/5">
                              Complex Logic
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-[#64748B] font-bold text-[9px] uppercase tracking-widest bg-[#0B1215] px-2 py-0.5 rounded border border-[#23333A]">
+                        <span className="flex items-center gap-2 text-[var(--ind-slate)] ind-data text-[10px] uppercase tracking-tighter bg-[var(--ind-bg)] px-2.5 py-0.5 rounded border border-[var(--ind-border)]">
                           <Clock size={10} /> {a.time}
                         </span>
                       </div>
                       
-                      <h3 className="text-xl font-bold text-white tracking-tight uppercase">
+                      <h3 className="ind-subtitle !text-lg !text-white !normal-case tracking-tight">
                         {a.message}
                       </h3>
                       
                       <div className="flex items-center gap-2">
-                          <Terminal size={12} className="text-[#006470]" />
-                          <p className="text-[9px] text-[#64748B] font-bold uppercase tracking-widest">
-                            Source: <span className="text-slate-300">{a.ruleName}</span>
+                          <Terminal size={12} className="text-[var(--ind-petroleum)]" />
+                          <p className="ind-label !text-[9px] !text-[var(--ind-slate)] opacity-60 lowercase">
+                            engine_node: <span className="text-slate-300 font-bold">{a.ruleName}</span>
                           </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Values Data Cell (Monospace) */}
-                  <div className="flex items-center gap-8 w-full xl:w-auto border-t xl:border-t-0 xl:border-l border-[#23333A] pt-6 xl:pt-0 xl:pl-8">
+                  {/* Values Data Cell (IDS Mono Style) */}
+                  <div className="flex items-center gap-10 w-full xl:w-auto border-t xl:border-t-0 xl:border-l border-[var(--ind-border)] pt-6 xl:pt-0 xl:pl-10">
                     <div className="flex flex-col items-end">
-                      <p className="label-caps mb-2 flex items-center gap-2">
-                          <BarChart3 size={12} /> Live Value
+                      <p className="ind-label mb-2 flex items-center gap-2 opacity-50">
+                          <BarChart3 size={12} /> Live Capture
                       </p>
-                      <div className={`text-4xl font-bold font-data tracking-tighter ${styles.text}`}>
+                      <div className={`ind-value-md !text-4xl ${styles.text}`}>
                         {isComplex ? "STACK" : (isNaN(a.value) ? a.value : Number(a.value).toFixed(2))}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 px-4 py-2 bg-[#0B1215] border border-[#23333A] rounded">
+                    <div className="flex items-center gap-4 px-4 py-2.5 bg-[var(--ind-bg)] border border-[var(--ind-border)] rounded shadow-inner">
                         <div className="flex flex-col">
-                          <span className="text-[7px] font-bold text-[#64748B] uppercase tracking-widest">Threshold</span>
-                          <span className={`text-[11px] font-bold uppercase font-data ${isComplex ? "text-purple-400" : "text-[#00FFCC]"}`}>
+                          <span className="text-[7px] font-black text-[var(--ind-slate)] uppercase tracking-[0.2em]">Threshold</span>
+                          <span className={`text-[12px] ind-data uppercase ${isComplex ? "text-purple-400" : "text-[var(--ind-cyan)]"}`}>
                               {isComplex ? "LOGIC" : a.threshold}
                           </span>
                         </div>
-                        <ArrowRight size={14} className="text-slate-700" />
-                        <ShieldAlert size={14} className={styles.text} />
+                        <ArrowRight size={14} className="text-slate-800" />
+                        <ShieldAlert size={16} className={styles.text} />
                     </div>
                   </div>
 

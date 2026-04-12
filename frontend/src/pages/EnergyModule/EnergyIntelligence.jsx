@@ -2,10 +2,12 @@ import React, { useMemo } from 'react';
 import { 
   Zap, Activity, ShieldAlert, Globe, Gauge, Server, ZapOff
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const EnergyIntelligence = ({ liveData = {}, connections = [], allTags = [] }) => {
-  
-  // --- 🎯 DATA LOGIC ---
+  const { t } = useTranslation();
+
+  // --- 🎯 DATA LOGIC (PRESERVED) ---
   const energyAnalyzers = useMemo(() => {
     return connections.filter(c => c.connection_type === 'energy_analyzer' && c.enabled);
   }, [connections]);
@@ -47,60 +49,47 @@ const EnergyIntelligence = ({ liveData = {}, connections = [], allTags = [] }) =
   }, [energyMappedData]);
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10">
       
-      {/* 🔡 INDUSTRIAL TYPOGRAPHY SETTINGS */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-        `}
-      </style>
-
       {/* 🏛️ HEADER SECTION */}
-      <div className="flex justify-between items-end border-b border-[#23333A] pb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-1.5 h-6 bg-[#006470]"></div>
-            <span className="label-caps">Energy Management System</span>
+      <div className="flex justify-between items-end border-b border-[var(--ind-border)] pb-8">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-[var(--ind-petroleum)]"></div>
+            <span className="ind-label">Energy Management System</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white uppercase">Plant Intelligence Hub</h1>
+          <h1 className="ind-title">Plant Intelligence Hub</h1>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest bg-[#141F24] px-4 py-2 border border-[#23333A]">
-          <Globe size={14} className="text-[#006470]" /> 
-          Live Network Data
+        <div className="ind-panel flex items-center gap-2 px-4 py-2 opacity-80">
+          <Globe size={14} className="text-[var(--ind-petroleum)]" /> 
+          <span className="ind-label !text-[9px]">Live Network Data</span>
         </div>
       </div>
 
-      {/* 📊 KPI ROW (Clean & Stable) */}
+      {/* 📊 KPI ROW */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Power */}
-        <div className="industrial-panel p-6 rounded-md border-t-4 border-t-amber-600">
-          <p className="label-caps mb-4">Total Active Load</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold font-data text-white">{plantTotals.power}</span>
-            <span className="text-xs font-semibold text-[#94A3B8]">kW</span>
+        <div className="ind-panel p-8 border-t-4 border-t-[var(--ind-amber)]">
+          <p className="ind-label mb-4">Total Active Load</p>
+          <div className="flex items-baseline">
+            <span className="ind-value-lg text-white">{plantTotals.power}</span>
+            <span className="ind-unit">kW</span>
           </div>
         </div>
 
-        {/* Avg CosPhi */}
-        <div className={`industrial-panel p-6 rounded-md border-t-4 ${plantTotals.cosPhi < 0.95 ? 'border-t-red-600' : 'border-t-[#00FFCC]'}`}>
-          <p className="label-caps mb-4">Power Factor (AVG)</p>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-bold font-data ${plantTotals.cosPhi < 0.95 ? 'text-red-500' : 'text-white'}`}>{plantTotals.cosPhi}</span>
-            <span className="text-xs font-semibold text-[#94A3B8]">cosφ</span>
+        <div className={`ind-panel p-8 border-t-4 ${plantTotals.cosPhi < 0.95 ? 'border-t-[var(--ind-red)]' : 'border-t-[var(--ind-cyan)]'}`}>
+          <p className="ind-label mb-4">Power Factor (AVG)</p>
+          <div className="flex items-baseline">
+            <span className={`ind-value-lg ${plantTotals.cosPhi < 0.95 ? 'text-[var(--ind-red)]' : 'text-white'}`}>{plantTotals.cosPhi}</span>
+            <span className="ind-unit">cosφ</span>
           </div>
         </div>
 
-        {/* System Health */}
-        <div className={`industrial-panel p-6 rounded-md border-t-4 ${plantTotals.criticalAnalyzers > 0 ? 'border-t-red-600' : 'border-t-[#006470]'}`}>
-          <p className="label-caps mb-4">Operational Status</p>
-          <div className="flex items-center gap-3">
-             <div className={`w-3 h-3 rounded-full ${plantTotals.criticalAnalyzers > 0 ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-             <span className="text-lg font-bold uppercase tracking-tight">
-               {plantTotals.criticalAnalyzers > 0 ? `${plantTotals.criticalAnalyzers} Critical Points` : 'All Nodes Stable'}
+        <div className={`ind-panel p-8 border-t-4 ${plantTotals.criticalAnalyzers > 0 ? 'border-t-[var(--ind-red)]' : 'border-t-[var(--ind-petroleum)]'}`}>
+          <p className="ind-label mb-4">Operational Status</p>
+          <div className="flex items-center gap-4">
+             <div className={`w-3.5 h-3.5 rounded-full ${plantTotals.criticalAnalyzers > 0 ? 'bg-[var(--ind-red)] animate-pulse' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]'}`} />
+             <span className="text-xl font-extrabold uppercase tracking-tight text-white">
+               {plantTotals.criticalAnalyzers > 0 ? `${plantTotals.criticalAnalyzers} Critical Nodes` : 'All Nodes Stable'}
              </span>
           </div>
         </div>
@@ -109,66 +98,66 @@ const EnergyIntelligence = ({ liveData = {}, connections = [], allTags = [] }) =
       {/* 📊 ANALYZER CARDS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {energyMappedData.map((ea) => (
-          <div key={ea.id} className="industrial-panel rounded-md overflow-hidden hover:border-[#006470] transition-colors">
+          <div key={ea.id} className="ind-panel group hover:border-[var(--ind-petroleum)] transition-all duration-300 overflow-hidden">
             
-            {/* Analyzer Header: Static & Clean */}
-            <div className="bg-[#1C262B] px-5 py-3 border-b border-[#23333A] flex justify-between items-center">
-               <span className="text-[10px] font-bold text-white uppercase tracking-wider">{ea.name}</span>
-               <div className="flex items-center gap-2">
-                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded ${ea.status ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                    {ea.status ? 'CONNECTED' : 'DISCONNECTED'}
-                  </span>
-               </div>
+            {/* Analyzer Header */}
+            <div className="bg-[var(--ind-header)] px-6 py-4 border-b border-[var(--ind-border)] flex justify-between items-center">
+               <h3 className="ind-subtitle">{ea.name}</h3>
+               <span className={`ind-status-badge ${ea.status ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20' : 'bg-red-500/5 text-red-500 border-red-500/20'}`}>
+                 {ea.status ? 'CONNECTED' : 'DISCONNECTED'}
+               </span>
             </div>
 
-            <div className="p-6 space-y-8">
+            <div className="p-8 space-y-8">
                 {/* Main Power Metric */}
                 <div>
-                  <p className="label-caps mb-2 opacity-60">Active Power</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-bold font-data text-white tracking-tighter">
+                  <p className="ind-label mb-2 opacity-50">Active Power</p>
+                  <div className="flex items-baseline">
+                    <span className="ind-value-lg text-white tracking-tighter">
                       {ea.power.toFixed(1)}
                     </span>
-                    <span className="text-sm font-semibold text-[#94A3B8]">kW</span>
+                    <span className="ind-unit">kW</span>
                   </div>
                 </div>
 
-                {/* Sub Metrics: Grid Layout */}
-                <div className="grid grid-cols-3 gap-4 pt-6 border-t border-[#23333A]">
-                   <div>
-                      <p className="label-caps mb-1 opacity-40">Voltage</p>
-                      <p className="text-lg font-bold font-data text-slate-300">{ea.voltage.toFixed(0)} <span className="text-[10px] text-[#94A3B8]">V</span></p>
-                   </div>
-                   <div>
-                      <p className="label-caps mb-1 opacity-40">Current</p>
-                      <p className="text-lg font-bold font-data text-slate-300">{ea.current.toFixed(1)} <span className="text-[10px] text-[#94A3B8]">A</span></p>
-                   </div>
-                   <div>
-                      <p className="label-caps mb-1 opacity-40">cosφ</p>
-                      <p className={`text-lg font-bold font-data ${ea.cosPhi < 0.95 && ea.cosPhi > 0 ? 'text-red-500' : 'text-[#00FFCC]'}`}>
+                {/* Sub Metrics Grid */}
+                <div className="grid grid-cols-3 gap-4 pt-8 border-t border-[var(--ind-border)]">
+                    <div>
+                      <p className="ind-label !text-[8px] mb-2 opacity-40">Voltage</p>
+                      <p className="ind-value-md text-slate-300">{ea.voltage.toFixed(0)} <span className="ind-unit">V</span></p>
+                    </div>
+                    <div>
+                      <p className="ind-label !text-[8px] mb-2 opacity-40">Current</p>
+                      <p className="ind-value-md text-slate-300">{ea.current.toFixed(1)} <span className="ind-unit">A</span></p>
+                    </div>
+                    <div>
+                      <p className="ind-label !text-[8px] mb-2 opacity-40">cosφ</p>
+                      <p className={`ind-value-md ${ea.cosPhi < 0.95 && ea.cosPhi > 0 ? 'text-[var(--ind-red)]' : 'text-[var(--ind-cyan)]'}`}>
                         {ea.cosPhi.toFixed(2)}
                       </p>
-                   </div>
+                    </div>
                 </div>
 
-                {/* Total Energy Counter (Analog Meter Style) */}
-                <div className="bg-[#0B1215] p-3 border border-[#23333A] rounded flex justify-between items-center">
-                   <span className="label-caps opacity-50">Accumulated</span>
-                   <span className="text-xl font-bold font-data text-[#00FFCC]">{ea.energy.toFixed(0)} <span className="text-[9px] text-[#94A3B8]">kWh</span></span>
+                {/* Total Energy Counter */}
+                <div className="bg-[var(--ind-bg)] p-4 border border-[var(--ind-border)] rounded flex justify-between items-center shadow-inner">
+                    <span className="ind-label !text-[8px] opacity-50">Accumulated</span>
+                    <div className="flex items-baseline">
+                      <span className="ind-value-md text-[var(--ind-cyan)]">{ea.energy.toFixed(0)}</span>
+                      <span className="ind-unit">kWh</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Load Line: Minimalist */}
-            <div className="h-1 w-full bg-[#0B1215]">
-               <div 
-                className={`h-full transition-all duration-1000 ${ea.cosPhi < 0.95 && ea.cosPhi > 0 ? 'bg-red-500' : 'bg-[#006470]'}`} 
-                style={{ width: `${Math.min((ea.power / 100) * 100, 100)}%` }}
-               />
+            {/* Load Capacity Bar */}
+            <div className="h-1.5 w-full bg-[var(--ind-bg)]">
+                <div 
+                  className={`h-full transition-all duration-1000 ${ea.cosPhi < 0.95 && ea.cosPhi > 0 ? 'bg-[var(--ind-red)]' : 'bg-[var(--ind-petroleum)]'}`} 
+                  style={{ width: `${Math.min((ea.power / 100) * 100, 100)}%` }}
+                />
             </div>
           </div>
         ))}
       </div>
-
     </div>
   );
 };

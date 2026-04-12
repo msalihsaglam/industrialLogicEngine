@@ -4,9 +4,12 @@ import {
   Activity, ShieldCheck, ShieldAlert, Layers, HardDrive, Info, 
   ChevronDown, Globe, Cpu, Server, CheckCircle2, Terminal
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 const HistorianSettings = ({ connections = [] }) => {
+  const { t } = useTranslation();
+
   // --- 🔒 CORE STATE (PRESERVED) ---
   const [allTags, setAllTags] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,46 +71,34 @@ const HistorianSettings = ({ connections = [] }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-10 pb-20 px-8 pt-10 text-[#F1F5F9] font-['IBM_Plex_Sans']">
+    <div className="max-w-[1600px] mx-auto space-y-12 pb-20 px-8 pt-10 font-sans">
       
-      {/* 🔡 INDUSTRIAL CORE STYLES */}
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-          .font-data { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-          .industrial-panel { background-color: #141F24; border: 1px solid #23333A; }
-          .label-caps { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #94A3B8; }
-          .input-field { background-color: #0B1215; border: 1px solid #23333A; padding: 10px 14px; border-radius: 4px; font-weight: 600; outline: none; }
-          .table-header { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em; color: #64748B; background-color: #1C262B; }
-        `}
-      </style>
-
-      {/* 🏛️ HEADER & GUIDE SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[#23333A] pb-10">
+      {/* 🏛️ HEADER & FILTER SECTION */}
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-10 border-b border-[var(--ind-border)] pb-10">
         <div className="space-y-4 min-w-[400px]">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-[#00FFCC]"></div>
-            <span className="label-caps">Data Persistence Layer</span>
+            <div className="w-1.5 h-6 bg-[var(--ind-cyan)]"></div>
+            <span className="ind-label">Data Persistence Layer</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight uppercase text-white leading-none">Historian Hub</h1>
+          <h1 className="ind-title">Historian Config</h1>
           
-          <div className="flex flex-col gap-3 mt-6">
+          <div className="flex flex-col gap-4 mt-8">
             <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#006470]" size={16} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ind-petroleum)]" size={16} />
                 <input 
                     type="text" 
                     placeholder="SEARCH TAGS OR INTERFACES..." 
-                    className="bg-[#141F24] border border-[#23333A] rounded-md py-2.5 pl-10 pr-4 text-[10px] font-bold text-white outline-none focus:border-[#00FFCC] w-full transition-all uppercase tracking-widest"
+                    className="ind-input !pl-12 !w-full"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="flex bg-[#0B1215] p-1 rounded border border-[#23333A] w-fit">
+            <div className="flex bg-[var(--ind-bg)] p-1 rounded border border-[var(--ind-border)] w-fit shadow-inner">
                 {['all', 'active', 'standby'].map(f => (
                     <button 
                         key={f}
                         onClick={() => setStatusFilter(f)}
-                        className={`px-4 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-[#006470] text-white shadow-md' : 'text-slate-500 hover:text-white'}`}
+                        className={`px-5 py-2 rounded-[var(--ind-radius)] ind-label !text-[9px] transition-all ${statusFilter === f ? 'bg-[var(--ind-petroleum)] text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}
                     >
                         {f === 'active' ? 'Recording' : f}
                     </button>
@@ -117,22 +108,22 @@ const HistorianSettings = ({ connections = [] }) => {
         </div>
 
         {/* 🎯 RIGHT: INTEGRATED ARCHIVE GUIDE */}
-        <div className="flex-1 industrial-panel p-6 rounded-md relative overflow-hidden flex flex-col md:flex-row gap-6 border-l-4 border-l-[#006470] shadow-sm">
-            <div className="p-3 bg-[#006470]/10 text-[#00FFCC] rounded h-fit"><Info size={20}/></div>
+        <div className="flex-1 ind-panel p-6 border-l-4 border-l-[var(--ind-petroleum)] relative overflow-hidden flex flex-col md:flex-row gap-8">
+            <div className="p-3 bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] rounded h-fit"><Info size={24}/></div>
             <div className="space-y-4">
-                <h5 className="label-caps border-b border-[#23333A] pb-2 inline-block">Archive Policy Protocol</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <h5 className="ind-label border-b border-[var(--ind-border)] pb-2 inline-block">Archive Policy Protocol</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="space-y-1">
-                        <p className="text-[#00FFCC] text-[10px] font-bold uppercase tracking-tighter">Sampling</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Adjust 'Interval' to control time-series sampling frequency.</p>
+                        <p className="ind-label !text-[var(--ind-cyan)]">Sampling</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Adjust interval for time-series frequency.</p>
                     </div>
-                    <div className="space-y-1 border-l border-[#23333A] pl-4">
-                        <p className="text-amber-500 text-[10px] font-bold uppercase tracking-tighter">Filter</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Use 'Deadband' to filter noise and ignore minor fluctuations.</p>
+                    <div className="space-y-1 border-l border-[var(--ind-border)] pl-4">
+                        <p className="ind-label !text-[var(--ind-amber)]">Filter</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Use deadband to ignore sensor noise.</p>
                     </div>
-                    <div className="space-y-1 border-l border-[#23333A] pl-4">
-                        <p className="text-blue-400 text-[10px] font-bold uppercase tracking-tighter">Persistence</p>
-                        <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">Active nodes are pushed to time-series archive for analytics.</p>
+                    <div className="space-y-1 border-l border-[var(--ind-border)] pl-4">
+                        <p className="ind-label !text-blue-400">Persistence</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed">Active nodes are pushed to secure archive.</p>
                     </div>
                 </div>
             </div>
@@ -147,88 +138,91 @@ const HistorianSettings = ({ connections = [] }) => {
           const isVirtual = connName === 'VIRTUAL WORKSPACE';
 
           return (
-            <div key={connName} className="animate-in slide-in-from-bottom-4 duration-500 overflow-hidden rounded-md border border-[#23333A]">
-              {/* Bölüm Başlığı (Sert Dikdörtgen) */}
+            <div key={connName} className="ind-panel !p-0 overflow-hidden border-[var(--ind-border)] shadow-lg animate-in fade-in slide-in-from-bottom-2">
+              {/* Section Header */}
               <button 
                 onClick={() => toggleSection(connName)}
-                className={`w-full flex items-center justify-between p-5 transition-all duration-300 ${isExpanded ? 'bg-[#1C262B]' : 'bg-[#141F24] hover:bg-[#1C262B]'}`}
+                className={`w-full flex items-center justify-between p-6 transition-all duration-300 relative ${isExpanded ? 'bg-[var(--ind-header)]' : 'bg-[var(--ind-panel)] hover:bg-[var(--ind-header)]'}`}
               >
+                {/* Vertical Accent Line */}
+                <div className={`absolute left-0 top-0 h-full w-1.5 ${isVirtual ? 'bg-purple-600' : (activeCount > 0 ? 'bg-[var(--ind-cyan)]' : 'bg-slate-700')}`} />
+                
                 <div className="flex items-center gap-6">
-                  <div className={`p-3 rounded border ${isVirtual ? 'bg-purple-600/5 text-purple-400 border-purple-500/20' : 'bg-[#006470]/5 text-[#00FFCC] border-[#006470]/20'}`}>
+                  <div className={`p-3 rounded border shadow-inner ${isVirtual ? 'bg-purple-600/5 text-purple-400 border-purple-500/20' : 'bg-[var(--ind-petroleum)]/10 text-[var(--ind-cyan)] border-[var(--ind-petroleum)]/30'}`}>
                     {isVirtual ? <Cpu size={24} /> : <Globe size={24} />}
                   </div>
                   <div className="text-left">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-tight leading-none">{connName}</h3>
+                    <h3 className="ind-subtitle !text-xl !text-white leading-none">{connName}</h3>
                     <div className="flex items-center gap-4 mt-2">
-                        <span className="label-caps !text-[8px] opacity-50 flex items-center gap-1.5 font-bold">
+                        <span className="ind-label !text-[8px] opacity-40 flex items-center gap-1.5">
                             <Layers size={10} /> {tags.length} Nodes
                         </span>
-                        <span className={`label-caps !text-[8px] flex items-center gap-1.5 font-bold ${activeCount > 0 ? 'text-[#00FFCC]' : 'text-slate-700'}`}>
+                        <span className={`ind-label !text-[8px] flex items-center gap-1.5 ${activeCount > 0 ? 'text-[var(--ind-cyan)]' : 'text-slate-700'}`}>
                             <Activity size={10} /> {activeCount} Recording
                         </span>
                     </div>
                   </div>
                 </div>
-                <div className={`text-slate-500 transition-transform duration-500 ${isExpanded ? 'rotate-180 text-[#00FFCC]' : ''}`}>
-                    <ChevronDown size={20} />
+                <div className={`text-slate-600 transition-transform duration-500 ${isExpanded ? 'rotate-180 text-[var(--ind-cyan)]' : ''}`}>
+                    <ChevronDown size={22} />
                 </div>
               </button>
 
-              {/* Bölüm İçeriği (Industrial Grid Table) */}
+              {/* Table Content */}
               {isExpanded && (
-                <div className="bg-[#0B1215] border-t border-[#23333A] overflow-hidden">
+                <div className="bg-[var(--ind-bg)] border-t border-[var(--ind-border)] overflow-x-auto">
                    <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="table-header">
-                          <th className="px-8 py-4 w-[120px]">State</th>
-                          <th className="px-8 py-4">Node Identifier</th>
-                          <th className="px-8 py-4 text-center w-[180px]">Log Interval (s)</th>
-                          <th className="px-8 py-4 text-center w-[180px]">Deadband</th>
-                          <th className="px-8 py-4 text-right pr-12">Integrity</th>
+                        <tr className="bg-[var(--ind-header)]/50 border-b border-[var(--ind-border)]">
+                          <th className="px-8 py-5 ind-label !text-slate-600 w-[120px]">State</th>
+                          <th className="px-8 py-5 ind-label !text-slate-600">Node Identifier</th>
+                          <th className="px-8 py-5 ind-label !text-slate-600 text-center w-[180px]">Interval (s)</th>
+                          <th className="px-8 py-5 ind-label !text-slate-600 text-center w-[180px]">Deadband</th>
+                          <th className="px-8 py-5 ind-label !text-slate-600 text-right pr-12">Integrity</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#23333A]/50">
+                      <tbody className="divide-y divide-[var(--ind-border)]/50">
                         {tags.map((tag) => (
-                          <tr key={tag.id} className={`transition-all ${tag.is_historian ? 'bg-[#006470]/5' : 'opacity-40 hover:opacity-100'}`}>
-                            <td className="px-8 py-4">
+                          <tr key={tag.id} className={`transition-all duration-300 group ${tag.is_historian ? 'bg-[var(--ind-petroleum)]/5' : 'opacity-40 hover:opacity-100'}`}>
+                            <td className="px-8 py-5">
                                 <button 
                                     onClick={() => handleUpdateTag(tag, 'is_historian', !tag.is_historian)}
-                                    className={`w-10 h-5 rounded-full relative transition-all duration-300 border ${tag.is_historian ? 'bg-[#006470] border-[#00FFCC]/30 shadow-[0_0_8px_#006470]' : 'bg-[#141F24] border-[#23333A]'}`}
+                                    className={`w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner ${tag.is_historian ? 'bg-[var(--ind-petroleum)]' : 'bg-slate-900'}`}
                                 >
-                                    <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all duration-300 ${tag.is_historian ? 'left-5.5' : 'left-0.5'}`} />
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${tag.is_historian ? 'left-7' : 'left-1'}`} />
                                 </button>
                             </td>
-                            <td className="px-8 py-4">
+                            <td className="px-8 py-5">
                               <div className="flex flex-col">
-                                <span className="text-white font-bold text-sm uppercase tracking-tight">{tag.tag_name}</span>
-                                <span className="text-[#64748B] text-[9px] font-data mt-0.5 uppercase tracking-widest">{tag.node_id || 'INTERNAL_VAR'}</span>
+                                <span className="text-white font-extrabold text-sm uppercase tracking-tight">{tag.tag_name}</span>
+                                <span className="ind-data text-[9px] text-[var(--ind-slate)] mt-1.5 tracking-widest">{tag.node_id || 'INTERNAL_VAR'}</span>
                               </div>
                             </td>
-                            <td className="px-8 py-4">
+                            <td className="px-8 py-5">
                                 <input 
                                     type="number" 
                                     value={tag.log_interval} 
                                     onChange={(e) => handleUpdateTag(tag, 'log_interval', e.target.value)}
-                                    className="w-full bg-[#141F24] border border-[#23333A] rounded p-2 text-center text-[10px] text-white focus:border-[#006470] outline-none font-data font-bold transition-all"
+                                    className="w-full ind-input !bg-[var(--ind-panel)] !py-2 text-center ind-data text-[12px] !text-[var(--ind-cyan)]"
                                 />
                             </td>
-                            <td className="px-8 py-4">
+                            <td className="px-8 py-5">
                                 <input 
                                     type="number" 
                                     step="0.1"
                                     value={tag.deadband} 
                                     onChange={(e) => handleUpdateTag(tag, 'deadband', e.target.value)}
-                                    className="w-full bg-[#141F24] border border-[#23333A] rounded p-2 text-center text-[10px] text-white focus:border-[#006470] outline-none font-data font-bold transition-all"
+                                    className="w-full ind-input !bg-[var(--ind-panel)] !py-2 text-center ind-data text-[12px] !text-[var(--ind-amber)]"
                                 />
                             </td>
-                            <td className="px-8 py-4 text-right pr-12">
+                            <td className="px-8 py-5 text-right pr-12">
                                 {tag.is_historian ? (
-                                    <div className="flex items-center justify-end gap-3">
-                                        <span className="text-[8px] font-bold text-[#00FFCC] uppercase tracking-widest animate-pulse">Syncing</span>
-                                        <ShieldCheck size={18} className="text-[#00FFCC]" />
+                                    <div className="flex items-center justify-end gap-3 group-hover:scale-105 transition-transform">
+                                        <span className="ind-data text-[9px] text-[var(--ind-cyan)] animate-pulse">RECORDING</span>
+                                        <ShieldCheck size={20} className="text-[var(--ind-cyan)]" />
                                     </div>
                                 ) : (
-                                    <ShieldAlert size={18} className="text-slate-800 ml-auto" />
+                                    <ShieldAlert size={20} className="text-slate-800 ml-auto opacity-20" />
                                 )}
                             </td>
                           </tr>
@@ -243,15 +237,15 @@ const HistorianSettings = ({ connections = [] }) => {
 
         {loading && (
           <div className="py-40 flex flex-col items-center justify-center gap-6">
-            <RefreshCcw className="animate-spin text-[#00FFCC]" size={40} />
-            <span className="label-caps tracking-[0.4em] text-[#006470]">Synchronizing Archive Cluster...</span>
+            <RefreshCcw className="animate-spin text-[var(--ind-cyan)]" size={48} />
+            <span className="ind-label tracking-[0.5em] text-[var(--ind-petroleum)]">Synchronizing Archive Cluster...</span>
           </div>
         )}
 
         {Object.keys(groupedTags).length === 0 && !loading && (
-            <div className="py-32 text-center industrial-panel border-dashed rounded-md opacity-20">
-                <Search size={48} className="mx-auto text-slate-800 mb-6" />
-                <p className="label-caps">Zero Archive Nodes Identified In Filter</p>
+            <div className="py-32 text-center ind-panel border-dashed opacity-20">
+                <Search size={56} className="mx-auto text-slate-800 mb-6" />
+                <p className="ind-label tracking-[0.2em]">Zero Archive Nodes Identified In Current Filter</p>
             </div>
         )}
       </div>
